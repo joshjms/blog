@@ -182,7 +182,6 @@ Everything below ships with the starter. Rows marked **setup** render nothing un
 | Newsletter signup — **setup**                                                   | `al_newsletter`                  | `newsletter:` in [\_config.yml](_config.yml)                                        |
 | Citation counts, altmetric/dimensions badges                                    | `al_citations`                   | [Adding a new publication](docs/CUSTOMIZE.md#adding-a-new-publication)              |
 | FontAwesome, Academicons, scholar icons                                         | `al_icons`                       | `third_party_libraries` in [\_config.yml](_config.yml)                              |
-| Posts syndicated from Medium and other feeds                                    | `al_ext_posts`                   | `external_sources:` in [\_config.yml](_config.yml)                                  |
 | Legacy Bootstrap markup (opt-in, removed in v2.0)                               | `al_folio_bootstrap_compat`      | `al_folio.compat.bootstrap` in [\_config.yml](_config.yml)                          |
 | Upgrade audits and codemods                                                     | `al_folio_upgrade`               | `bundle exec al-folio upgrade audit`                                                |
 
@@ -218,7 +217,7 @@ Projects are one of four Jekyll `collections` the starter ships (`news`, `projec
 
 ### Writing
 
-Posts support the [distill.pub](https://distill.pub/) layout, MathJax and TikZ, syntax-highlighted code, Jupyter notebooks, charts, image galleries, video and audio embeds.
+Posts support the [distill.pub](https://distill.pub/) layout, MathJax and TikZ, syntax-highlighted code, charts, image galleries, video and audio embeds.
 
 <p align="center">
   <a href="https://alshedivat.github.io/al-folio/blog/2021/distill/"><img src="readme_preview/distill.png" width=400></a>

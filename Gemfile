@@ -11,7 +11,6 @@ group :jekyll_plugins do
     gem 'jekyll-feed'
     gem 'jekyll-get-json'
     gem 'jekyll-imagemagick'
-    gem 'jekyll-jupyter-notebook'
     gem 'jekyll-link-attributes'
     gem 'jekyll-minifier'
     gem 'jekyll-paginate-v2'
@@ -50,7 +49,6 @@ group :al_folio_plugins do
 
     gem 'al_analytics', '= 1.0.2'
     gem 'al_citations', '= 1.0.1'
-    gem 'al_ext_posts', '= 1.0.3'
     gem 'al_img_tools', '= 1.0.3'
     gem 'al_search', '= 1.0.3'
     gem 'al_charts', '= 1.0.1'

@@ -151,11 +151,6 @@ Assuming you have [Ruby](https://www.ruby-lang.org/en/downloads/) and [Bundler](
 
 ```bash
 bundle install
-# optional but recommended if you use jupyter posts:
-# installs jupyter + nbconvert for jekyll-jupyter-notebook
-./bin/setup-python-deps
-# or manually:
-# python3 -m pip install --user --break-system-packages jupyter nbconvert
 bundle exec jekyll serve
 ```
 
@@ -168,8 +163,6 @@ Starter plugin wiring lives in:
 - [\_config.yml](../_config.yml) for Jekyll plugin activation/config
 
 `al-folio` starter does not currently use a gemspec; contributor/plugin integration docs should reference the two files above.
-
-If `jekyll-jupyter-notebook` is enabled and `jupyter-nbconvert` is missing, builds continue but notebook rendering is skipped with a warning.
 
 To see the template running, open your browser and go to `http://localhost:4000`. You should see a copy of the theme's [demo website](https://alshedivat.github.io/al-folio/). Now, feel free to customize the theme however you like. After you are done, remember to **commit** your final changes.
 

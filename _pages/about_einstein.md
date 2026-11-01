@@ -1,5 +1,5 @@
-Write your biography here. Tell the world about yourself. Link to your favorite [subreddit](https://www.reddit.com). You can put a picture in, too. The code is already in, just name your picture `prof_pic.jpg` and put it in the `img/` folder.
+I'm an AI Engineer in Huawei Norbert Wiener Research Center working in the Processor Algorithms team. I graduated from Nanyang Technological University in Summer 2026, taking Electrical and Electronics Engineering.
 
-Put your address / P.O. box / other info right below your picture. You can also disable any these elements by editing `profile` property of the YAML header of your `_pages/about.md`. Edit `_bibliography/papers.bib` and Jekyll will render your [publications page](/al-folio/publications/) automatically.
+I'm looking for a PhD position in Singapore. I'm interested in the fields of software-hardware codesign.
 
-Link to your social media connections, too. This theme is set up to use [Font Awesome icons](https://fontawesome.com/) and [Academicons](https://jpswalsh.github.io/academicons/), like the ones below. Add your Facebook, Twitter, LinkedIn, Google Scholar, or just disable all of them.
+You can reach out to me through [email](mailto:joshjms1607@gmail.com) or [Instagram](https://instagram.com/joshjms16).

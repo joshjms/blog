@@ -19,7 +19,6 @@ Here are some frequently asked questions. If you have a different question, plea
   - [Do I need to fork every v1 gem to customize layouts and Liquid files?](#do-i-need-to-fork-every-v1-gem-to-customize-layouts-and-liquid-files)
   - [How do I know when a local override is stale after a plugin update?](#how-do-i-know-when-a-local-override-is-stale-after-a-plugin-update)
   - [Why does v1.x starter not have npm run build:css anymore?](#why-does-v1x-starter-not-have-npm-run-buildcss-anymore)
-  - [Jupyter posts are enabled, but my build says jupyter-nbconvert is missing. What are my options?](#jupyter-posts-are-enabled-but-my-build-says-jupyter-nbconvert-is-missing-what-are-my-options)
   - [How do I handle legacy Bootstrap-marked pages on Tailwind-first v1.x?](#how-do-i-handle-legacy-bootstrap-marked-pages-on-tailwind-first-v1x)
   - [How does sidebar table of contents work in v1.x?](#how-does-sidebar-table-of-contents-work-in-v1x)
   - [Why does pretty_table: true still work when Bootstrap compatibility is disabled?](#why-does-pretty_table-true-still-work-when-bootstrap-compatibility-is-disabled)
@@ -164,28 +163,6 @@ Use gem repos for:
 
 See [`BOUNDARIES.md`](BOUNDARIES.md) for the ownership contract.
 
-## Jupyter posts are enabled, but my build says `jupyter-nbconvert` is missing. What are my options?
-
-`jekyll-jupyter-notebook` depends on Python tooling (`jupyter` + `nbconvert`), and Bundler cannot install Python packages for you.
-
-Recommended options:
-
-1. Install Python deps locally:
-
-```bash
-./bin/setup-python-deps
-```
-
-2. Or install manually in your Python environment:
-
-```bash
-python3 -m pip install --user --break-system-packages jupyter nbconvert
-```
-
-3. If you do not need notebook rendering, disable/remove the plugin from `_config.yml`.
-
-In `v1.x`, missing `jupyter-nbconvert` is treated as warn-and-continue; notebook rendering is skipped until deps are installed.
-
 ## How do I handle legacy Bootstrap-marked pages on Tailwind-first `v1.x`?
 
 `v1.x` core is Tailwind-first. If your content still relies on Bootstrap-marked classes or `data-toggle` behavior, enable compatibility mode temporarily:
@@ -314,7 +291,6 @@ Build and deployment:
   - [Do I need to fork every v1 gem to customize layouts and Liquid files?](#do-i-need-to-fork-every-v1-gem-to-customize-layouts-and-liquid-files)
   - [How do I know when a local override is stale after a plugin update?](#how-do-i-know-when-a-local-override-is-stale-after-a-plugin-update)
   - [Why does v1.x starter not have npm run build:css anymore?](#why-does-v1x-starter-not-have-npm-run-buildcss-anymore)
-  - [Jupyter posts are enabled, but my build says jupyter-nbconvert is missing. What are my options?](#jupyter-posts-are-enabled-but-my-build-says-jupyter-nbconvert-is-missing-what-are-my-options)
   - [How do I handle legacy Bootstrap-marked pages on Tailwind-first v1.x?](#how-do-i-handle-legacy-bootstrap-marked-pages-on-tailwind-first-v1x)
   - [How does sidebar table of contents work in v1.x?](#how-does-sidebar-table-of-contents-work-in-v1x)
   - [Why does pretty_table: true still work when Bootstrap compatibility is disabled?](#why-does-pretty_table-true-still-work-when-bootstrap-compatibility-is-disabled)

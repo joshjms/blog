@@ -19,7 +19,7 @@ In short: `al-folio` v1.x is a **thin Jekyll starter, not a theme**. It owns sta
 
 - `.github/agents/` — custom agents (`customize.agent.md`, `docs.agent.md`).
 - `.github/instructions/` — per-file-type instruction files (Liquid, YAML, BibTeX, Markdown, JavaScript).
-- `.github/workflows/copilot-setup-steps.yml` — pre-installs Ruby, Python, Node, ImageMagick, and nbconvert for the coding agent.
+- `.github/workflows/copilot-setup-steps.yml` — pre-installs Ruby, Python, Node, and ImageMagick for the coding agent.
 - `.agents/skills/` — canonical agent skills, also exposed via the `.codex/skills` and `.claude/skills` symlinks.
 
 ## CI expectations
