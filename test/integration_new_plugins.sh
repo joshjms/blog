@@ -17,7 +17,7 @@ build() {
   local name="$1"
   shift
   local out="${tmp_dir}/site-${name}"
-  bundle exec jekyll build "$@" -d "${out}" >/dev/null
+  bundle exec jekyll build --unpublished "$@" -d "${out}" >/dev/null
   echo "${out}"
 }
 

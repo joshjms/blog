@@ -94,7 +94,7 @@ jobs:
 
           # Production matches what visitors see, which is what the README depicts.
           export JEKYLL_ENV=production
-          bundle exec jekyll build --destination _screenshot_site/al-folio
+          bundle exec jekyll build --unpublished --destination _screenshot_site/al-folio
 
       - name: Serve and capture 📸
         run: |

@@ -18,7 +18,7 @@ giscus:
   category_id: DIC_kwDOExample
 YAML
 
-bundle exec jekyll build --config "_config.yml,${tmp_override}" -d "${tmp_site}" >/dev/null
+bundle exec jekyll build --unpublished --config "_config.yml,${tmp_override}" -d "${tmp_site}" >/dev/null
 
 giscus_page="${tmp_site}/blog/2022/giscus-comments/index.html"
 disqus_page="${tmp_site}/blog/2015/disqus-comments/index.html"
