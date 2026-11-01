@@ -51,12 +51,6 @@ jobs:
           ruby-version: "3.3"
           bundler-cache: true
 
-      - name: Setup Python 🐍
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-          cache: "pip"
-
       - name: Setup Node 🧰
         uses: actions/setup-node@v4
         with:
