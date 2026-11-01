@@ -1,0 +1,118 @@
+<!DOCTYPE html> <html lang="en"> <head> <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"> <meta charset="utf-8"> <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"> <meta http-equiv="X-UA-Compatible" content="IE=edge"> <title> Cadencia: Automatic Beatmap Generator for osu!mania | joshjms </title> <meta name="author" content="Joshua James"> <meta name="description" content="Training a model for automatic generation of 4K osu!mania beatmap for arbitrary songs."> <meta name="keywords" content="nerd"> <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data: https:; media-src 'self' https:; frame-src 'self' https:; connect-src 'self' https:;"> <style>
+  :root {
+    --max-content-width: 930px;
+  }
+</style> <link rel="stylesheet" href="/assets/css/tailwind.css?v=50c64c15cbb9fd1ce6056fdb8bcb4b62"> <link defer rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.2.0/css/all.min.css" integrity="sha256-MVopmdyC2tYTiJ8wlktf0uh0v4NgT+vNdyVFepi7Q0c=" crossorigin="anonymous"> <link defer rel="stylesheet" href="https://cdn.jsdelivr.net/npm/academicons@1.9.5/css/academicons.min.css" integrity="sha256-SzrCOBJbGVFMahewkgjwnApaV2+av1DwMAA+/QGLyZw=" crossorigin="anonymous"> <link defer rel="stylesheet" href="https://cdn.jsdelivr.net/npm/scholar-icons@1.0.3/css/scholar-icons.css" integrity="sha256-VY3hHVj/hNX3fYG6wtbA6TcKJQl7+FthzGSyIB64klY=" crossorigin="anonymous"> <link defer rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Roboto+Slab:100,300,400,500,700|Material+Icons&amp;display=swap"> <link defer rel="stylesheet" href="/assets/css/jekyll-pygments-themes-github.css?v=591dab5a4e56573bf4ef7fd332894c99" media="" id="highlight_theme_light"> <link rel="shortcut icon" href="data:image/svg+xml,&lt;svg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20100%20100%22&gt;&lt;text%20y=%22.9em%22%20font-size=%2290%22&gt;%F0%9F%A5%B2&lt;/text&gt;&lt;/svg&gt;"> <link rel="stylesheet" href="/assets/css/main.css?v=3116ba77db9ee1581d05bb3e86fbf7f1"> <link rel="canonical" href="https://joshjms.com/blog/2026/cadencia/"> <script src="/assets/js/theme.js?v=5286c3e4c334d0ecb8fc0c40ff4fa7ec"></script> <link defer rel="stylesheet" href="/assets/css/jekyll-pygments-themes-native.css?v=5847e5ed4a4568527aa6cfab446049ca" media="none" id="highlight_theme_dark"> <script>
+    initTheme();
+  </script> </head> <body class="fixed-top-nav "> <header> <nav id="navbar" class="navbar navbar-light navbar-expand-sm fixed-top" role="navigation"> <div class="container"> <a class="navbar-brand title font-weight-lighter" href="/"> joshjms </a> <button class="navbar-toggler collapsed navbar-toggler-main" type="button" data-nav-toggle="navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation"> <span class="sr-only">Toggle navigation</span> <span class="icon-bar top-bar"></span> <span class="icon-bar middle-bar"></span> <span class="icon-bar bottom-bar"></span> </button> <div class="collapse navbar-collapse navbar-collapse-main" id="navbarNav"> <ul class="navbar-nav navbar-menu-list flex-nowrap"> <li class="nav-item "> <a class="nav-link" href="/">about </a> </li> <li class="nav-item active"> <a class="nav-link" href="/blog/">blog </a> </li> <li class="nav-item "> <a class="nav-link" href="/repositories/">repositories </a> </li> <li class="nav-item "> <a class="nav-link" href="/cv/">CV </a> </li> <li class="nav-item"> <button id="search-toggle" type="button" title="Search" aria-label="Open search"> <span class="nav-link">ctrl k <i class="fa-solid fa-magnifying-glass"></i></span> </button> </li> <li class="toggle-container"> <button id="light-toggle" type="button" title="Change theme" aria-label="Change color theme"> <i class="fa-half-sun-moon" id="light-toggle-system"></i> <i class="fa-solid fa-moon" id="light-toggle-dark"></i> <i class="fa-solid fa-sun" id="light-toggle-light"></i> </button> </li> </ul> </div> </div> </nav> <progress id="progress" value="0"> <div class="progress-container"> <span class="progress-bar"></span> </div> </progress> </header> <div class="container mt-5" role="main"> <div class="post"> <header class="post-header"> <h1 class="post-title">Cadencia: Automatic Beatmap Generator for osu!mania</h1> <p class="post-meta"> Created on November 01, 2026 </p> <p class="post-tags"> <a href="/blog/2026"> <i class="fa-solid fa-calendar fa-sm"></i> 2026 </a>   ·   <a href="/blog/tag/machine-learning"> <i class="fa-solid fa-hashtag fa-sm"></i> machine-learning</a>   <a href="/blog/tag/osu"> <i class="fa-solid fa-hashtag fa-sm"></i> osu</a>   ·   <a href="/blog/category/projects"> <i class="fa-solid fa-tag fa-sm"></i> projects</a> </p> </header> <article class="post-content"> <div id="markdown-content"> <blockquote> <p>I like to play rhythm games, but most rhythm game songs are Japanese and I want to play other songs.</p> </blockquote> <p>Beatmaps or charts, is a term for a collection of actions a player is required to perform during a song on specific timings. Different rhythm games have different ways, some more creative than others, to represent these beatmaps. For example, Project Sekai has falling notes on a lane-based playfield, where notes drop toward a judgement line at the bottom of the screen and the player has to tap, hold, or flick each one as it lands on the line.</p> <p>Many rhythm games are very creative in how they make the experience enjoyable for players, this makes it quite difficult to generate beatmaps for these games. Therefore, for the sake of simplicity let’s consider creating maps for osu!mania.</p> <p><a href="https://osu.ppy.sh/wiki/en/Game_mode/osu%21mania" rel="external nofollow noopener" target="_blank">osu!mania</a> is a game mode inside the popular rhythm game osu!, which I <a href="https://osu.ppy.sh/users/19050223" rel="external nofollow noopener" target="_blank">played</a> often in highschool and much less often now. osu!mania has multiple lanes and a judgement line at the bottom. A map with 4 lanes are called 4K maps and a map with 7 lanes are called 7K maps.</p> <div class="row mt-3"> <div class="col-sm mt-3 mt-md-0"> <figure> <picture> <source class="responsive-img-srcset" srcset="/assets/img/osumania_web-480.webp 480w,/assets/img/osumania_web-800.webp 800w,/assets/img/osumania_web-1400.webp 1400w," type="image/webp" sizes="95vw"></source> <img src="/assets/img/osumania_web.png" class="img-fluid rounded z-depth-1" width="100%" height="auto" alt="osu!mania four-lane gameplay" loading="eager" onerror="this.onerror=null; document.querySelectorAll('.responsive-img-srcset').forEach(function (n) { n.remove(); });"> </picture> </figure> </div> </div> <p>So I tried creating a beatmap automatic generator so that I can enjoy playing songs I like.</p> <div class="row mt-3"> <div class="col-sm mt-3 mt-md-0"> <figure> <video src="/assets/video/hivi_beatmap.mp4" class="img-fluid rounded z-depth-1" width="auto" height="auto" controls=""></video> </figure> </div> </div> <div class="caption"> HIVI! - Siapkah Kau 'Tuk Jatuh Cinta </div> <h2 id="architecture">Architecture</h2> <p>I collected data for 1000 charts of varying difficulty. For each chart, we keep the audio features describing the music, note times, lanes, and hold lengths, difficulty (measured using osu!mania star ratings), and timing information from original chart.</p> <p>We divide the song into 10-millisecond steps. At each step, the model receives nearby audio, previous notes, difficulty, and beat information. Its target describes what the human mapper placed there.</p> <p>In particular, the question asked is: <em>“At time $t$, given this music and previous notes, should something happen? If so, which lanes should contain taps or hold starts?”</em> Many steps contain no notes so we sample some of these empty steps during training and weight them to account for the sampling.</p> <div class="row mt-3"> <div class="col-sm mt-3 mt-md-0"> <figure> <picture> <source class="responsive-img-srcset" srcset="/assets/img/cadencia_architecture-480.webp 480w,/assets/img/cadencia_architecture-800.webp 800w,/assets/img/cadencia_architecture-1400.webp 1400w," type="image/webp" sizes="95vw"></source> <img src="/assets/img/cadencia_architecture.png" class="img-fluid rounded z-depth-1" width="100%" height="auto" alt="Cadencia model architecture" loading="eager" onerror="this.onerror=null; document.querySelectorAll('.responsive-img-srcset').forEach(function (n) { n.remove(); });"> </picture> </figure> </div> </div> <p>I present the architecture for Cadencia. I use <a href="https://huggingface.co/m-a-p/MERT-v2-30s" rel="external nofollow noopener" target="_blank">MERT-v2-30s</a> as the audio encoder to extract features from the music. Its weights remain frozen during training, so we can use its existing musical representations.</p> <p>I also added a mel-spectrogram branch. A mel spectrogram shows how the sound’s frequency content changes over time. The idea is to give the model additional information about short musical attacks that may help with note timing.</p> <p>Then, we have a separate beat tracker that estimates the song’s beats and bar positions. This gives the model a sense of where it is within the rhythm, including when the tempo changes.</p> <p>The model also needs to understand how activity changes throughout the song. A quiet introduction should usually feel different from an energetic chorus. For this, I use a bar planner: a small transformer that looks across the song and predicts four properties for each bar:</p> <ul> <li>How likely the bar is to contain no notes.</li> <li>How many notes it should contain per beat.</li> <li>How often notes should form chords.</li> <li>How much of the bar should be occupied by holds.</li> </ul> <p>These predictions then guide the note decoder. The note decoder’s responsibility is to actually make the following predictions:</p> <ol> <li>Timing - Should an event happen at this timestamp?</li> <li>Placement - Which four-lane pattern should happen?</li> <li>Duration - How long should each hold last?</li> </ol> <p>The decoder itself is pretty small, just two layers with approximately 0.8 M parameters. Its self-attention combines information from previous events, while cross-attention lets it read the audio features. Before training with audio, I first trained parts of the decoder using chart sequences. Given previous events, it learned to predict the next event’s timing gap, lane pattern, and hold lengths. Those weights then provided a starting point for audio-conditioned training.</p> <p>During training, the model receives feedback on three things: whether it places an event at the right time, whether it chooses the correct four-lane pattern, and whether its hold lengths match the human chart.</p> <p>However, individually correct notes do not necessarily form a natural pattern. To address this, I also train on four-beat windows and compare transitions between neighboring patterns. This considers which lane combinations follow each other and how far apart they occur. An additional loss encourages these local transitions to resemble those in human charts.</p> <p>This comparison uses predicted probabilities, allowing it to guide learning through backpropagation. It captures local pattern statistics, rather than judging the musical quality of an entire phrase.</p> <p>The balance between these training signals matters. Most timestamps contain no notes, and some windows are much quieter than others. I combine several complete windows into each training batch, sample some empty timestamps, and weight the losses to account for the sampling. The pattern-transition loss receives a small weight that increases gradually at the start of training.</p> <p>During training, the decoder receives previous notes from the human chart. During generation, it instead uses its own previous predictions. This makes playtesting important: matching a reference chart during training does not guarantee that a complete generated chart will feel good to play.</p> <p>I probably should have created a decent baseline for comparison reasons, unfortunately we’re way past that. The next time I do research, having a good baseline model to produce iterative improvements is important.</p> <h2 id="code">Code</h2> <ul> <li><a href="https://github.com/joshjms/cadencia" rel="external nofollow noopener" target="_blank">Github</a></li> <li> <a href="#">Huggingface Model</a> - WIP</li> </ul> </div> </article> </div> </div> <footer class="fixed-bottom" role="contentinfo"> <div class="container mt-0"> © Copyright 2026 Joshua James. </div> </footer> <script>
+  window.alFolio = {
+    compatBootstrap: false
+  };
+</script> <script src="/assets/js/nav-toggle.js?v=141bd79a73ebc0f0b6ea58e440ae79fc"></script> <script defer src="https://cdn.jsdelivr.net/npm/masonry-layout@4.2.2/dist/masonry.pkgd.min.js" integrity="sha256-Nn1q/fx0H7SNLZMQ5Hw5JLaTRZp0yILA/FRexe19VdI=" crossorigin="anonymous"></script> <script defer src="https://cdn.jsdelivr.net/npm/imagesloaded@5.0.0/imagesloaded.pkgd.min.js" integrity="sha256-htrLFfZJ6v5udOG+3kNLINIKh2gvoKqwEhHYfTTMICc=" crossorigin="anonymous"></script> <script defer src="/assets/js/masonry.js?v=e49affc7bd2646f6acdad1dbe02c2359" type="text/javascript"></script> <script defer type="text/javascript" id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js" integrity="sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI=" crossorigin="anonymous"></script> <script src="/assets/al_math/js/mathjax-setup.js"></script> <script src="/assets/js/tooltips-setup.js?v=fe487e99db6c43751e6e7bdb2d6a0611"></script> <script src="/assets/js/no_defer.js?v=53b1b1a645525975c963ce8bf8bfefcf"></script> <script defer src="/assets/js/common.js?v=87baac90f765f2f3362dcf6aaf312a8a"></script> <script defer src="/assets/js/copy_code.js?v=c8a01c11a92744d44b093fc3bda915df" type="text/javascript"></script> <script defer src="/assets/js/jupyter_new_tab.js?v=896d254890d9b47f0281f63bfccf0dee"></script> <script async src="https://d1bxh8uas1mnw7.cloudfront.net/assets/embed.js"></script> <script async src="https://badge.dimensions.ai/badge.js"></script> <script defer src="https://cdn.jsdelivr.net/npm/medium-zoom@1.1.0/dist/medium-zoom.min.js" integrity="sha256-ZgMyDAIYDYGxbcpJcfUnYwNevG/xi9OHKaR/8GK+jWc=" crossorigin="anonymous"></script> <script defer src="/assets/al_img_tools/js/zoom.js"></script> <script defer src="/assets/js/progress-bar.js?v=499464c5c63ced6cf7ad62509f1e2610" type="text/javascript"></script> <script src="https://cdn.jsdelivr.net/npm/vanilla-back-to-top@7.2.1/dist/vanilla-back-to-top.min.js" integrity="sha256-uMJJ3EoTyfRBoTbR+lrfu1uRQ87RZG8AR3cVNuQVeFg=" crossorigin="anonymous"></script> <script>
+    addBackToTop();
+  </script> <script type="module" src="/assets/al_search/js/search/ninja-keys.min.js"></script> <ninja-keys hidebreadcrumbs noautoloadmdicons placeholder="Type to start searching"></ninja-keys> <script src="/assets/al_search/js/search-setup.js"></script> <script>
+// get the ninja-keys element
+const ninja = document.querySelector('ninja-keys');
+
+// add the home and posts menu items
+ninja.data = [{
+    id: "nav-about",
+    title: "about",
+    section: "Navigation",
+    handler: () => {
+      window.location.href = "/";
+    },
+  },{id: "nav-blog",
+          title: "blog",
+          description: "",
+          section: "Navigation",
+          handler: () => {
+            window.location.href = "/blog/";
+          },
+        },{id: "nav-repositories",
+          title: "repositories",
+          description: "GitHub has an unplanned uptime.",
+          section: "Navigation",
+          handler: () => {
+            window.location.href = "/repositories/";
+          },
+        },{id: "nav-cv",
+          title: "CV",
+          description: "A summary of my experiences.",
+          section: "Navigation",
+          handler: () => {
+            window.location.href = "/cv/";
+          },
+        },{id: "post-cadencia-automatic-beatmap-generator-for-osu-mania",
+        
+          title: "Cadencia: Automatic Beatmap Generator for osu!mania",
+        
+        description: "Training a model for automatic generation of 4K osu!mania beatmap for arbitrary songs.",
+        section: "Posts",
+        handler: () => {
+          
+            window.location.href = "/blog/2026/cadencia/";
+          
+        },
+      },{id: "post-linux-namespaces-from-inside-the-kernel",
+        
+          title: "Linux Namespaces From Inside the Kernel",
+        
+        description: "A deep dive into how Linux namespaces actually work inside the Linux kernel.",
+        section: "Posts",
+        handler: () => {
+          
+            window.location.href = "/blog/2026/linux-namespaces-from-inside-the-kernel/";
+          
+        },
+      },{id: "books-the-godfather",
+          title: 'The Godfather',
+          description: "",
+          section: "Books",handler: () => {
+              window.location.href = "/books/the_godfather/";
+            },},{id: "news-migrated-blog-sparkles-sparkles",
+          title: 'Migrated blog! <img class="emoji" title=":sparkles:" alt=":sparkles:" src="https://github.githubassets.com/images/icons/emoji/unicode/2728.png" height="20" width="20"> <img class="emoji" title=":sparkles:" alt=":sparkles:" src="https://github.githubassets.com/images/icons/emoji/unicode/2728.png" height="20" width="20">',
+          description: "",
+          section: "News",},{
+        id: 'social-cv',
+        title: 'CV',
+        section: 'Socials',
+        handler: () => {
+          window.open("/assets/pdf/example_pdf.pdf", "_blank");
+        },
+      },{
+        id: 'social-email',
+        title: 'email',
+        section: 'Socials',
+        handler: () => {
+          window.open("mailto:%6A%6F%73%68%6A%6D%73%31%36%30%37@%67%6D%61%69%6C.%63%6F%6D", "_blank");
+        },
+      },{
+      id: 'light-theme',
+      title: 'Change theme to light',
+      description: 'Change the theme of the site to Light',
+      section: 'Theme',
+      handler: () => {
+        setThemeSetting("light");
+      },
+    },
+    {
+      id: 'dark-theme',
+      title: 'Change theme to dark',
+      description: 'Change the theme of the site to Dark',
+      section: 'Theme',
+      handler: () => {
+        setThemeSetting("dark");
+      },
+    },
+    {
+      id: 'system-theme',
+      title: 'Use system default theme',
+      description: 'Change the theme of the site to System Default',
+      section: 'Theme',
+      handler: () => {
+        setThemeSetting("system");
+      },
+    },];
+
+</script> <script src="/assets/al_search/js/shortcut-key.js"></script> </body> </html>

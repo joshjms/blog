@@ -1,669 +1,387 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en"><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://alshedivat.github.io/al-folio/feed.xml" rel="self" type="application/atom+xml"/><link href="https://alshedivat.github.io/al-folio/" rel="alternate" type="text/html" hreflang="en"/><updated>2026-09-22T22:56:36+00:00</updated><id>https://alshedivat.github.io/al-folio/feed.xml</id><title type="html">blank</title><subtitle>A simple, whitespace theme for academics. Based on [*folio](https://github.com/bogoli/-folio) design. </subtitle><entry><title type="html">a post with marimo snippets</title><link href="https://alshedivat.github.io/al-folio/blog/2025/marimo/" rel="alternate" type="text/html" title="a post with marimo snippets"/><published>2025-04-28T12:00:00+00:00</published><updated>2025-04-28T12:00:00+00:00</updated><id>https://alshedivat.github.io/al-folio/blog/2025/marimo</id><content type="html" xml:base="https://alshedivat.github.io/al-folio/blog/2025/marimo/"><![CDATA[<p><a href="https://marimo.io">marimo</a> notebooks can run Python directly in the reader’s browser. Opt a page in from its front matter:</p> <div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nn">---</span>
-<span class="na">layout</span><span class="pi">:</span> <span class="s">post</span>
-<span class="na">title</span><span class="pi">:</span> <span class="s">a post with marimo snippets</span>
-<span class="na">marimo</span><span class="pi">:</span> <span class="kc">true</span>
-<span class="nn">---</span>
-</code></pre></div></div> <p>Nothing is loaded on pages without that flag, so bundling the plugin costs nothing site-wide.</p> <h2 id="runnable-snippets">Runnable snippets</h2> <p>Wrap fenced Python blocks in a container and the runtime turns them into an interactive notebook after the page loads:</p> <div class="al-marimo-inline"> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="n">marimo</span> <span class="k">as</span> <span class="n">mo</span>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en"><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://joshjms.com/feed.xml" rel="self" type="application/atom+xml"/><link href="https://joshjms.com/" rel="alternate" type="text/html" hreflang="en"/><updated>2026-11-01T16:35:25+00:00</updated><id>https://joshjms.com/feed.xml</id><title type="html">joshjms</title><subtitle>A simple, whitespace theme for academics. Based on [*folio](https://github.com/bogoli/-folio) design. </subtitle><entry><title type="html">Cadencia: Automatic Beatmap Generator for osu!mania</title><link href="https://joshjms.com/blog/2026/cadencia/" rel="alternate" type="text/html" title="Cadencia: Automatic Beatmap Generator for osu!mania"/><published>2026-11-01T02:50:00+00:00</published><updated>2026-11-01T02:50:00+00:00</updated><id>https://joshjms.com/blog/2026/cadencia</id><content type="html" xml:base="https://joshjms.com/blog/2026/cadencia/"><![CDATA[<blockquote> <p>I like to play rhythm games, but most rhythm game songs are Japanese and I want to play other songs.</p> </blockquote> <p>Beatmaps or charts, is a term for a collection of actions a player is required to perform during a song on specific timings. Different rhythm games have different ways, some more creative than others, to represent these beatmaps. For example, Project Sekai has falling notes on a lane-based playfield, where notes drop toward a judgement line at the bottom of the screen and the player has to tap, hold, or flick each one as it lands on the line.</p> <p>Many rhythm games are very creative in how they make the experience enjoyable for players, this makes it quite difficult to generate beatmaps for these games. Therefore, for the sake of simplicity let’s consider creating maps for osu!mania.</p> <p><a href="https://osu.ppy.sh/wiki/en/Game_mode/osu%21mania">osu!mania</a> is a game mode inside the popular rhythm game osu!, which I <a href="https://osu.ppy.sh/users/19050223">played</a> often in highschool and much less often now. osu!mania has multiple lanes and a judgement line at the bottom. A map with 4 lanes are called 4K maps and a map with 7 lanes are called 7K maps.</p> <div class="row mt-3"> <div class="col-sm mt-3 mt-md-0"> <figure> <picture> <source class="responsive-img-srcset" srcset="/assets/img/osumania_web-480.webp 480w,/assets/img/osumania_web-800.webp 800w,/assets/img/osumania_web-1400.webp 1400w," type="image/webp" sizes="95vw"/> <img src="/assets/img/osumania_web.png" class="img-fluid rounded z-depth-1" width="100%" height="auto" alt="osu!mania four-lane gameplay" loading="eager" onerror="this.onerror=null; document.querySelectorAll('.responsive-img-srcset').forEach(function (n) { n.remove(); });"/> </picture> </figure> </div> </div> <p>So I tried creating a beatmap automatic generator so that I can enjoy playing songs I like.</p> <div class="row mt-3"> <div class="col-sm mt-3 mt-md-0"> <figure> <video src="/assets/video/hivi_beatmap.mp4" class="img-fluid rounded z-depth-1" width="auto" height="auto" controls=""/> </figure> </div> </div> <div class="caption"> HIVI! - Siapkah Kau 'Tuk Jatuh Cinta </div> <h2 id="architecture">Architecture</h2> <p>I collected data for 1000 charts of varying difficulty. For each chart, we keep the audio features describing the music, note times, lanes, and hold lengths, difficulty (measured using osu!mania star ratings), and timing information from original chart.</p> <p>We divide the song into 10-millisecond steps. At each step, the model receives nearby audio, previous notes, difficulty, and beat information. Its target describes what the human mapper placed there.</p> <p>In particular, the question asked is: <em>“At time $t$, given this music and previous notes, should something happen? If so, which lanes should contain taps or hold starts?”</em> Many steps contain no notes so we sample some of these empty steps during training and weight them to account for the sampling.</p> <div class="row mt-3"> <div class="col-sm mt-3 mt-md-0"> <figure> <picture> <source class="responsive-img-srcset" srcset="/assets/img/cadencia_architecture-480.webp 480w,/assets/img/cadencia_architecture-800.webp 800w,/assets/img/cadencia_architecture-1400.webp 1400w," type="image/webp" sizes="95vw"/> <img src="/assets/img/cadencia_architecture.png" class="img-fluid rounded z-depth-1" width="100%" height="auto" alt="Cadencia model architecture" loading="eager" onerror="this.onerror=null; document.querySelectorAll('.responsive-img-srcset').forEach(function (n) { n.remove(); });"/> </picture> </figure> </div> </div> <p>I present the architecture for Cadencia. I use <a href="https://huggingface.co/m-a-p/MERT-v2-30s">MERT-v2-30s</a> as the audio encoder to extract features from the music. Its weights remain frozen during training, so we can use its existing musical representations.</p> <p>I also added a mel-spectrogram branch. A mel spectrogram shows how the sound’s frequency content changes over time. The idea is to give the model additional information about short musical attacks that may help with note timing.</p> <p>Then, we have a separate beat tracker that estimates the song’s beats and bar positions. This gives the model a sense of where it is within the rhythm, including when the tempo changes.</p> <p>The model also needs to understand how activity changes throughout the song. A quiet introduction should usually feel different from an energetic chorus. For this, I use a bar planner: a small transformer that looks across the song and predicts four properties for each bar:</p> <ul> <li>How likely the bar is to contain no notes.</li> <li>How many notes it should contain per beat.</li> <li>How often notes should form chords.</li> <li>How much of the bar should be occupied by holds.</li> </ul> <p>These predictions then guide the note decoder. The note decoder’s responsibility is to actually make the following predictions:</p> <ol> <li>Timing - Should an event happen at this timestamp?</li> <li>Placement - Which four-lane pattern should happen?</li> <li>Duration - How long should each hold last?</li> </ol> <p>The decoder itself is pretty small, just two layers with approximately 0.8 M parameters. Its self-attention combines information from previous events, while cross-attention lets it read the audio features. Before training with audio, I first trained parts of the decoder using chart sequences. Given previous events, it learned to predict the next event’s timing gap, lane pattern, and hold lengths. Those weights then provided a starting point for audio-conditioned training.</p> <p>During training, the model receives feedback on three things: whether it places an event at the right time, whether it chooses the correct four-lane pattern, and whether its hold lengths match the human chart.</p> <p>However, individually correct notes do not necessarily form a natural pattern. To address this, I also train on four-beat windows and compare transitions between neighboring patterns. This considers which lane combinations follow each other and how far apart they occur. An additional loss encourages these local transitions to resemble those in human charts.</p> <p>This comparison uses predicted probabilities, allowing it to guide learning through backpropagation. It captures local pattern statistics, rather than judging the musical quality of an entire phrase.</p> <p>The balance between these training signals matters. Most timestamps contain no notes, and some windows are much quieter than others. I combine several complete windows into each training batch, sample some empty timestamps, and weight the losses to account for the sampling. The pattern-transition loss receives a small weight that increases gradually at the start of training.</p> <p>During training, the decoder receives previous notes from the human chart. During generation, it instead uses its own previous predictions. This makes playtesting important: matching a reference chart during training does not guarantee that a complete generated chart will feel good to play.</p> <p>I probably should have created a decent baseline for comparison reasons, unfortunately we’re way past that. The next time I do research, having a good baseline model to produce iterative improvements is important.</p> <h2 id="code">Code</h2> <ul> <li><a href="https://github.com/joshjms/cadencia">Github</a></li> <li><a href="#">Huggingface Model</a> - WIP</li> </ul>]]></content><author><name></name></author><category term="projects"/><category term="machine-learning"/><category term="osu"/><summary type="html"><![CDATA[Training a model for automatic generation of 4K osu!mania beatmap for arbitrary songs.]]></summary></entry><entry><title type="html">Linux Namespaces From Inside the Kernel</title><link href="https://joshjms.com/blog/2026/linux-namespaces-from-inside-the-kernel/" rel="alternate" type="text/html" title="Linux Namespaces From Inside the Kernel"/><published>2026-01-06T00:00:00+00:00</published><updated>2026-01-06T00:00:00+00:00</updated><id>https://joshjms.com/blog/2026/linux-namespaces-from-inside-the-kernel</id><content type="html" xml:base="https://joshjms.com/blog/2026/linux-namespaces-from-inside-the-kernel/"><![CDATA[<p>Happy New Year!</p> <p>This has been in my books for a while. As much as I want to write regularly, I do not have enough cores in my brain to write fast - and whoever designed the scheduling algorithm in my brain (me) really sucks because it keeps context-switching (I keep getting distracted).</p> <p>Last November, I had the opportunity of a lifetime to speak in Google Devfest Singapore. I spoke about how containers work under the hood. I introduced the requirements of an online judge and why container-like sandboxes are needed. Then how to use Linux primitives to create a minimal container.</p> <div class="row mt-3"> <div class="col-sm mt-3 mt-md-0"> <figure> <picture> <source class="responsive-img-srcset" srcset="/assets/img/linux-namespaces-devfest-480.webp 480w,/assets/img/linux-namespaces-devfest-800.webp 800w,/assets/img/linux-namespaces-devfest-1400.webp 1400w," type="image/webp" sizes="95vw"/> <img src="/assets/img/linux-namespaces-devfest.jpg" class="img-fluid rounded z-depth-1" width="100%" height="auto" alt="Google Devfest Singapore 2025" loading="lazy" onerror="this.onerror=null; document.querySelectorAll('.responsive-img-srcset').forEach(function (n) { n.remove(); });"/> </picture> </figure> </div> <div class="col-sm mt-3 mt-md-0"> <figure> <picture> <source class="responsive-img-srcset" srcset="/assets/img/linux-namespaces-devfest-01-480.webp 480w,/assets/img/linux-namespaces-devfest-01-800.webp 800w,/assets/img/linux-namespaces-devfest-01-1400.webp 1400w," type="image/webp" sizes="95vw"/> <img src="/assets/img/linux-namespaces-devfest-01.jpg" class="img-fluid rounded z-depth-1" width="100%" height="auto" alt="Google Devfest Singapore 2025" loading="lazy" onerror="this.onerror=null; document.querySelectorAll('.responsive-img-srcset').forEach(function (n) { n.remove(); });"/> </picture> </figure> </div> </div> <p>Well, in that talk, I explained about <a href="https://man7.org/linux/man-pages/man7/namespaces.7.html"><strong>namespaces</strong></a> which are a Linux kernel feature that limits what a process can see. This includes <a href="https://man7.org/linux/man-pages/man7/mount_namespaces.7.html">mounts</a>, <a href="https://man7.org/linux/man-pages/man7/user_namespaces.7.html">users</a>, and even <a href="https://man7.org/linux/man-pages/man7/pid_namespaces.7.html">other processes</a>. Then, I became curious about how the kernel is able to isolate the views of different resources among different namespaces. Therefore, the motivation for this blog.</p> <h2 id="namespaces">Namespaces</h2> <p>Namespaces are a feature of the Linux kernel that control the resources that are (or can be) seen by processes. This means that processes in a namespace sees resources differently compared to processes in a different namespace.</p> <p>As of kernel version 5.6, there are 8 namespace types:</p> <ul> <li>Mount</li> <li>PID</li> <li>Network</li> <li>IPC</li> <li>UTS</li> <li>User</li> <li>Control group</li> <li>Time</li> </ul> <p>Each process belongs to a namespace and can only see resources that are associated with that namespace, for example, a process in a PID namespace can only see processes inside that namespace.</p> <p>It goes without saying, namespaces are crucial for the modern containers we all know and love.</p> <p>We can create namespaces using the <code class="language-plaintext highlighter-rouge">unshare</code> or <code class="language-plaintext highlighter-rouge">clone</code> system calls. We will talk more about these later on in this blog.</p> <h2 id="a-process-from-the-kernels-perspective">A Process from the Kernel’s Perspective</h2> <p>To understand how namespaces appear from the kernel’s perspective, we should first take a look at how a process is represented. We can find this by reading the <a href="https://elixir.bootlin.com/linux/v6.18.3/source/kernel">kernel code</a> (latest version used as of writing is v6.18.3).</p> <p>It’s a long struct, exactly 850 lines, but you can take a look at it <a href="https://elixir.bootlin.com/linux/v6.18.3/source/include/linux/sched.h#L819">here</a>.</p> <p>Turns out there’s an interesting field:</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">task_struct</span>
+<span class="p">{</span>
+    <span class="p">...</span>
+	<span class="cm">/* Namespaces: */</span>
+	<span class="k">struct</span> <span class="n">nsproxy</span> <span class="o">*</span><span class="n">nsproxy</span><span class="p">;</span>
+    <span class="p">...</span>
+<span class="p">}</span> <span class="n">__attribute__</span><span class="p">((</span><span class="n">aligned</span><span class="p">(</span><span class="mi">64</span><span class="p">)));</span>
+</code></pre></div></div> <blockquote> <p>The kernel doesn’t actually bother with the concept of processes. It treats both processes and threads as tasks.</p> </blockquote> <p>Each task has a pointer to a <code class="language-plaintext highlighter-rouge">struct nsproxy</code>.</p> <h2 id="a-process-nsproxy">A Process’ <code class="language-plaintext highlighter-rouge">nsproxy</code></h2> <p>The implementation for <code class="language-plaintext highlighter-rouge">struct nsproxy</code> can be found <a href="https://elixir.bootlin.com/linux/v6.18.3/source/include/linux/nsproxy.h#L32">here</a>.</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/*
+ * A structure to contain pointers to all per-process
+ * namespaces - fs (mount), uts, network, sysvipc, etc.
+ *
+ * The pid namespace is an exception -- it's accessed using
+ * task_active_pid_ns.  The pid namespace here is the
+ * namespace that children will use.
+ *
+ * 'count' is the number of tasks holding a reference.
+ * The count for each namespace, then, will be the number
+ * of nsproxies pointing to it, not the number of tasks.
+ *
+ * The nsproxy is shared by tasks which share all namespaces.
+ * As soon as a single namespace is cloned or unshared, the
+ * nsproxy is copied.
+ */</span>
+<span class="k">struct</span> <span class="n">nsproxy</span> <span class="p">{</span>
+	<span class="n">refcount_t</span> <span class="n">count</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">uts_namespace</span> <span class="o">*</span><span class="n">uts_ns</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">ipc_namespace</span> <span class="o">*</span><span class="n">ipc_ns</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">mnt_namespace</span> <span class="o">*</span><span class="n">mnt_ns</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">pid_namespace</span> <span class="o">*</span><span class="n">pid_ns_for_children</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">net</span> 	     <span class="o">*</span><span class="n">net_ns</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">time_namespace</span> <span class="o">*</span><span class="n">time_ns</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">time_namespace</span> <span class="o">*</span><span class="n">time_ns_for_children</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">cgroup_namespace</span> <span class="o">*</span><span class="n">cgroup_ns</span><span class="p">;</span>
+<span class="p">};</span>
+</code></pre></div></div> <p><code class="language-plaintext highlighter-rouge">struct nsproxy</code> has a pointer to all the respective namespace structs. Since each <code class="language-plaintext highlighter-rouge">task_struct</code> holds a pointer to an <code class="language-plaintext highlighter-rouge">nsproxy</code>, every task is associated to a specific set of namespaces.</p> <p>We’ll see operations involving <code class="language-plaintext highlighter-rouge">nsproxy</code> <a href="https://elixir.bootlin.com/linux/v6.18.3/source/kernel/nsproxy.c">here</a>.</p> <p>Tasks can share the same <code class="language-plaintext highlighter-rouge">nsproxy</code>. Linux uses a copy-on-write for namespace membership. When you <code class="language-plaintext highlighter-rouge">unshare</code> or <code class="language-plaintext highlighter-rouge">clone</code>, the kernel copies the <code class="language-plaintext highlighter-rouge">nsproxy</code> of the parent task and changes only the requested parts.</p> <p>The initial process (PID 1) has a statically defined <code class="language-plaintext highlighter-rouge">nsproxy</code> (<code class="language-plaintext highlighter-rouge">init_nsproxy</code>) which represents the root namespace set. All other tasks either share this <code class="language-plaintext highlighter-rouge">nsproxy</code> or has a derived copy of it.</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">nsproxy</span> <span class="n">init_nsproxy</span> <span class="o">=</span> <span class="p">{</span>
+	<span class="p">.</span><span class="n">count</span>			<span class="o">=</span> <span class="n">REFCOUNT_INIT</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span>
+	<span class="p">.</span><span class="n">uts_ns</span>			<span class="o">=</span> <span class="o">&amp;</span><span class="n">init_uts_ns</span><span class="p">,</span>
+<span class="cp">#if defined(CONFIG_POSIX_MQUEUE) || defined(CONFIG_SYSVIPC)
+</span>	<span class="p">.</span><span class="n">ipc_ns</span>			<span class="o">=</span> <span class="o">&amp;</span><span class="n">init_ipc_ns</span><span class="p">,</span>
+<span class="cp">#endif
+</span>	<span class="p">.</span><span class="n">mnt_ns</span>			<span class="o">=</span> <span class="nb">NULL</span><span class="p">,</span>
+	<span class="p">.</span><span class="n">pid_ns_for_children</span>	<span class="o">=</span> <span class="o">&amp;</span><span class="n">init_pid_ns</span><span class="p">,</span>
+<span class="cp">#ifdef CONFIG_NET
+</span>	<span class="p">.</span><span class="n">net_ns</span>			<span class="o">=</span> <span class="o">&amp;</span><span class="n">init_net</span><span class="p">,</span>
+<span class="cp">#endif
+#ifdef CONFIG_CGROUPS
+</span>	<span class="p">.</span><span class="n">cgroup_ns</span>		<span class="o">=</span> <span class="o">&amp;</span><span class="n">init_cgroup_ns</span><span class="p">,</span>
+<span class="cp">#endif
+#ifdef CONFIG_TIME_NS
+</span>	<span class="p">.</span><span class="n">time_ns</span>		<span class="o">=</span> <span class="o">&amp;</span><span class="n">init_time_ns</span><span class="p">,</span>
+	<span class="p">.</span><span class="n">time_ns_for_children</span>	<span class="o">=</span> <span class="o">&amp;</span><span class="n">init_time_ns</span><span class="p">,</span>
+<span class="cp">#endif
+</span><span class="p">};</span>
+</code></pre></div></div> <blockquote> <p>If you are wondering why <code class="language-plaintext highlighter-rouge">.mnt_ns = NULL</code>, it’s because the mount namespace does not exist at the time <code class="language-plaintext highlighter-rouge">init_nsproxy</code> is defined. Mount namespaces depend on VFS (Virtual File System) which is only initialized after boot. It is assigned later, after the VFS is initialized, the root filesystem is mounted, and the initial task’s <code class="language-plaintext highlighter-rouge">fs_struct</code> is set up.</p> </blockquote> <h2 id="how-a-namespace-is-created-using-clone">How a Namespace is Created Using <code class="language-plaintext highlighter-rouge">clone</code></h2> <p>As was mentioned earlier, you can create namespaces using <code class="language-plaintext highlighter-rouge">clone</code>. <a href="https://man7.org/linux/man-pages/man2/clone.2.html"><code class="language-plaintext highlighter-rouge">clone</code></a> is a system call that is used to create a child task. It is similar to <a href="https://man7.org/linux/man-pages/man2/fork.2.html"><code class="language-plaintext highlighter-rouge">fork</code></a> but <code class="language-plaintext highlighter-rouge">fork</code> creates a child with an almost exact copy of the parent’s execution context, <code class="language-plaintext highlighter-rouge">clone</code> gives the caller fine-grained control over what gets shared and separated. In particular, when using <code class="language-plaintext highlighter-rouge">fork</code>, the child task inherits the namespaces (by sharing the same <code class="language-plaintext highlighter-rouge">nsproxy</code>) from the parent. Using <code class="language-plaintext highlighter-rouge">clone</code> allows the caller to specify the creation of new namespaces.</p> <p>I used the following code to demonstrate how to create a child process inside a new PID namespace:</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="o">*</span><span class="n">stack</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">malloc</span><span class="p">(</span><span class="n">STACK_SIZE</span><span class="p">);</span>
 
-<span class="n">slider</span> <span class="o">=</span> <span class="n">mo</span><span class="p">.</span><span class="n">ui</span><span class="p">.</span><span class="nf">slider</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="sh">"</span><span class="s">n</span><span class="sh">"</span><span class="p">)</span>
-<span class="n">slider</span>
-</code></pre></div> </div> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">mo</span><span class="p">.</span><span class="nf">md</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">The first </span><span class="si">{</span><span class="n">slider</span><span class="p">.</span><span class="n">value</span><span class="si">}</span><span class="s"> squares: </span><span class="si">{</span><span class="p">[</span><span class="n">i</span><span class="o">**</span><span class="mi">2</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nf">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">slider</span><span class="p">.</span><span class="n">value</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span>
-</code></pre></div> </div> </div> <p>Until the runtime has moved those blocks into place the container stays hidden, so readers never see the raw source flash before it becomes a notebook.</p> <h2 id="embedding-a-hosted-notebook">Embedding a hosted notebook</h2> <p>If you already publish a notebook — on <code class="language-plaintext highlighter-rouge">marimo.app</code> or your own WASM host — embed it instead:</p> <div class="language-liquid highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">{%</span><span class="w"> </span><span class="nt">al_marimo_embed</span><span class="w"> </span><span class="na">src</span><span class="o">=</span><span class="s2">"https://marimo.app/l/your-notebook"</span><span class="w"> </span><span class="na">height</span><span class="o">=</span><span class="s2">"700px"</span><span class="w"> </span><span class="na">caption</span><span class="o">=</span><span class="s2">"Sampling demo"</span><span class="w"> </span><span class="cp">%}</span>
-</code></pre></div></div> <p>The frame is sandboxed <strong>without</strong> <code class="language-plaintext highlighter-rouge">allow-same-origin</code>, so the embedded notebook cannot reach this page’s storage or cookies.</p> <h2 id="a-note-on-what-this-loads">A note on what this loads</h2> <p>The <code class="language-plaintext highlighter-rouge">marimo-snippets</code> runtime is vendored into the plugin at a pinned version and served from your own site, rather than pulled from a CDN — so no third-party origin executes script in your readers’ pages. Running a notebook does contact marimo’s host, which is worth knowing before you opt a page in.</p>]]></content><author><name></name></author><category term="sample-posts"/><category term="code"/><category term="formatting"/><summary type="html"><![CDATA[running Python in the browser with marimo]]></summary></entry><entry><title type="html">a post with plotly.js</title><link href="https://alshedivat.github.io/al-folio/blog/2025/plotly/" rel="alternate" type="text/html" title="a post with plotly.js"/><published>2025-03-26T14:24:00+00:00</published><updated>2025-03-26T14:24:00+00:00</updated><id>https://alshedivat.github.io/al-folio/blog/2025/plotly</id><content type="html" xml:base="https://alshedivat.github.io/al-folio/blog/2025/plotly/"><![CDATA[<p>This is an example post with some <a href="https://plotly.com/javascript/">plotly</a> code.</p> <div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">```</span><span class="nl">plotly
-</span><span class="sb">{
-  "data": [
-    {
-      "x": [1, 2, 3, 4],
-      "y": [10, 15, 13, 17],
-      "type": "scatter"
-    },
-    {
-      "x": [1, 2, 3, 4],
-      "y": [16, 5, 11, 9],
-      "type": "scatter"
-    }
-  ]
-}</span>
-<span class="p">```</span>
-</code></pre></div></div> <p>Which generates:</p> <pre><code class="language-plotly">{
-  "data": [
-    {
-      "x": [1, 2, 3, 4],
-      "y": [10, 15, 13, 17],
-      "type": "scatter"
-    },
-    {
-      "x": [1, 2, 3, 4],
-      "y": [16, 5, 11, 9],
-      "type": "scatter"
-    }
-  ]
-}
-</code></pre> <p>Also another example chart.</p> <div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">```</span><span class="nl">plotly
-</span><span class="sb">{
-  "data": [
-    {
-      "x": [1, 2, 3, 4],
-      "y": [10, 15, 13, 17],
-      "mode": "markers"
-    },
-    {
-      "x": [2, 3, 4, 5],
-      "y": [16, 5, 11, 9],
-      "mode": "lines"
-    },
-    {
-      "x": [1, 2, 3, 4],
-      "y": [12, 9, 15, 12],
-      "mode": "lines+markers"
-    }
-  ],
-  "layout": {
-    "title": {
-      "text": "Line and Scatter Plot"
-    }
-  }
-}</span>
-<span class="p">```</span>
-</code></pre></div></div> <p>This is how it looks like:</p> <pre><code class="language-plotly">{
-  "data": [
-    {
-      "x": [1, 2, 3, 4],
-      "y": [10, 15, 13, 17],
-      "mode": "markers"
-    },
-    {
-      "x": [2, 3, 4, 5],
-      "y": [16, 5, 11, 9],
-      "mode": "lines"
-    },
-    {
-      "x": [1, 2, 3, 4],
-      "y": [12, 9, 15, 12],
-      "mode": "lines+markers"
-    }
-  ],
-  "layout": {
-    "title": {
-      "text": "Line and Scatter Plot"
-    }
-  }
-}
-</code></pre>]]></content><author><name></name></author><category term="sample-posts"/><category term="formatting"/><category term="charts"/><summary type="html"><![CDATA[this is what included plotly.js code could look like]]></summary></entry><entry><title type="html">a post with image galleries</title><link href="https://alshedivat.github.io/al-folio/blog/2024/photo-gallery/" rel="alternate" type="text/html" title="a post with image galleries"/><published>2024-12-04T01:59:00+00:00</published><updated>2024-12-04T01:59:00+00:00</updated><id>https://alshedivat.github.io/al-folio/blog/2024/photo-gallery</id><content type="html" xml:base="https://alshedivat.github.io/al-folio/blog/2024/photo-gallery/"><![CDATA[<p>The images in this post are all zoomable, arranged into different mini-galleries using different libraries.</p> <h2 id="lightbox2">Lightbox2</h2> <p><a href="https://cdn.photoswipe.com/photoswipe-demo-images/photos/1/img-2500.jpg" data-lightbox="roadtrip"><img src="https://cdn.photoswipe.com/photoswipe-demo-images/photos/1/img-200.jpg"/></a> <a href="https://cdn.photoswipe.com/photoswipe-demo-images/photos/2/img-2500.jpg" data-lightbox="roadtrip"><img src="https://cdn.photoswipe.com/photoswipe-demo-images/photos/2/img-200.jpg"/></a> <a href="https://cdn.photoswipe.com/photoswipe-demo-images/photos/3/img-2500.jpg" data-lightbox="roadtrip"><img src="https://cdn.photoswipe.com/photoswipe-demo-images/photos/3/img-200.jpg"/></a></p> <hr/> <h2 id="photoswipe"><a href="https://photoswipe.com/">PhotoSwipe</a></h2> <div class="pswp-gallery pswp-gallery--single-column" id="gallery--getting-started"> <a href="https://cdn.photoswipe.com/photoswipe-demo-images/photos/2/img-2500.jpg" data-pswp-width="1669" data-pswp-height="2500" target="_blank"> <img src="https://cdn.photoswipe.com/photoswipe-demo-images/photos/2/img-200.jpg" alt=""/> </a> <a href="https://cdn.photoswipe.com/photoswipe-demo-images/photos/7/img-2500.jpg" data-pswp-width="1875" data-pswp-height="2500" data-cropped="true" target="_blank"> <img src="https://cdn.photoswipe.com/photoswipe-demo-images/photos/7/img-200.jpg" alt=""/> </a> <a href="https://unsplash.com" data-pswp-src="https://cdn.photoswipe.com/photoswipe-demo-images/photos/3/img-2500.jpg" data-pswp-width="2500" data-pswp-height="1666" target="_blank"> <img src="https://cdn.photoswipe.com/photoswipe-demo-images/photos/3/img-200.jpg" alt=""/> </a> <div> <a href="https://cdn.photoswipe.com/photoswipe-demo-images/photos/6/img-2500.jpg" data-pswp-width="2500" data-pswp-height="1667" target="_blank"> <img src="https://cdn.photoswipe.com/photoswipe-demo-images/photos/6/img-200.jpg" alt=""/> </a> </div> </div> <hr/> <h2 id="spotlight-js"><a href="https://nextapps-de.github.io/spotlight/">Spotlight JS</a></h2> <div class="spotlight-group"> <a class="spotlight" href="https://cdn.photoswipe.com/photoswipe-demo-images/photos/1/img-2500.jpg"> <img src="https://cdn.photoswipe.com/photoswipe-demo-images/photos/1/img-200.jpg"/> </a> <a class="spotlight" href="https://cdn.photoswipe.com/photoswipe-demo-images/photos/2/img-2500.jpg"> <img src="https://cdn.photoswipe.com/photoswipe-demo-images/photos/2/img-200.jpg"/> </a> <a class="spotlight" href="https://cdn.photoswipe.com/photoswipe-demo-images/photos/3/img-2500.jpg"> <img src="https://cdn.photoswipe.com/photoswipe-demo-images/photos/3/img-200.jpg"/> </a> </div> <div class="spotlight-group"> <a class="spotlight" href="https://cdn.photoswipe.com/photoswipe-demo-images/photos/4/img-2500.jpg"> <img src="https://cdn.photoswipe.com/photoswipe-demo-images/photos/4/img-200.jpg"/> </a> <a class="spotlight" href="https://cdn.photoswipe.com/photoswipe-demo-images/photos/5/img-2500.jpg"> <img src="https://cdn.photoswipe.com/photoswipe-demo-images/photos/5/img-200.jpg"/> </a> <a class="spotlight" href="https://cdn.photoswipe.com/photoswipe-demo-images/photos/6/img-2500.jpg"> <img src="https://cdn.photoswipe.com/photoswipe-demo-images/photos/6/img-200.jpg"/> </a> </div> <hr/> <h2 id="venobox"><a href="https://veno.es/venobox/">Venobox</a></h2> <p><a class="venobox" data-gall="myGallery" href="https://cdn.photoswipe.com/photoswipe-demo-images/photos/1/img-2500.jpg"><img src="https://cdn.photoswipe.com/photoswipe-demo-images/photos/1/img-200.jpg"/></a> <a class="venobox" data-gall="myGallery" href="https://cdn.photoswipe.com/photoswipe-demo-images/photos/2/img-2500.jpg"><img src="https://cdn.photoswipe.com/photoswipe-demo-images/photos/2/img-200.jpg"/></a> <a class="venobox" data-gall="myGallery" href="https://cdn.photoswipe.com/photoswipe-demo-images/photos/3/img-2500.jpg"><img src="https://cdn.photoswipe.com/photoswipe-demo-images/photos/3/img-200.jpg"/></a></p>]]></content><author><name></name></author><category term="sample-posts"/><category term="formatting"/><category term="images"/><summary type="html"><![CDATA[this is what included image galleries could look like]]></summary></entry><entry><title type="html">Google Gemini updates: Flash 1.5, Gemma 2 and Project Astra</title><link href="https://alshedivat.github.io/al-folio/blog/2024/google-gemini-updates-flash-15-gemma-2-and-project-astra/" rel="alternate" type="text/html" title="Google Gemini updates: Flash 1.5, Gemma 2 and Project Astra"/><published>2024-05-14T00:00:00+00:00</published><updated>2024-05-14T00:00:00+00:00</updated><id>https://alshedivat.github.io/al-folio/blog/2024/google-gemini-updates-flash-15-gemma-2-and-project-astra</id><content type="html" xml:base="https://alshedivat.github.io/al-folio/blog/2024/google-gemini-updates-flash-15-gemma-2-and-project-astra/"><![CDATA[<p>Gemini breaks new ground with a faster model, longer context, AI agents and moreLearn more:Learn more:Learn more:Models &amp; ResearchProductsInfrastructure &amp; cloudTechnology Learn more: ProductsPlatformsDevices Learn more: Outreach &amp; initiativesLeadershipInside Google Learn more: May 14, 2024 We’re introducing a series of updates across the Gemini family of models, including the new 1.5 Flash, our lightweight model for speed and efficiency, and Project Astra, our vision for the future of AI assistants. Demis HassabisCEO of Google DeepMind, on behalf of the Gemini teamIn December, we launched our first natively multimodal model Gemini 1.0 in three sizes: Ultra, Pro and Nano. Just a few months later we released 1.5 Pro, with enhanced performance and a breakthrough long context window of 1 million tokens.Developers and enterprise customers have been putting 1.5 Pro to use in incredible ways and finding its long context window, multimodal reasoning capabilities and impressive overall performance incredibly useful.We know from user feedback that some applications need lower latency and a lower cost to serve. This inspired us to keep innovating, so today, we’re introducing Gemini 1.5 Flash: a model that’s lighter-weight than 1.5 Pro, and designed to be fast and efficient to serve at scale.Both 1.5 Pro and 1.5 Flash are available in public preview with a 1 million token context window in Google AI Studio and Vertex AI. And now, 1.5 Pro is also available with a 2 million token context window via waitlist to developers using the API and to Google Cloud customers.We’re also introducing updates across the Gemini family of models, announcing our next generation of open models, Gemma 2, and sharing progress on the future of AI assistants, with Project Astra.Context lengths of leading foundation models compared with Gemini 1.5’s 2 million token capability1.5 Flash is the newest addition to the Gemini model family and the fastest Gemini model served in the API. It’s optimized for high-volume, high-frequency tasks at scale, is more cost-efficient to serve and features our breakthrough long context window.While it’s a lighter weight model than 1.5 Pro, it’s highly capable of multimodal reasoning across vast amounts of information and delivers impressive quality for its size.The new Gemini 1.5 Flash model is optimized for speed and efficiency, is highly capable of multimodal reasoning and features our breakthrough long context window.1.5 Flash excels at summarization, chat applications, image and video captioning, data extraction from long documents and tables, and more. This is because it’s been trained by 1.5 Pro through a process called “distillation,” where the most essential knowledge and skills from a larger model are transferred to a smaller, more efficient model.Read more about 1.5 Flash in our updated Gemini 1.5 technical report, on the Gemini technology page, and learn about 1.5 Flash’s availability and pricing.Over the last few months, we’ve significantly improved 1.5 Pro, our best model for general performance across a wide range of tasks.Beyond extending its context window to 2 million tokens, we’ve enhanced its code generation, logical reasoning and planning, multi-turn conversation, and audio and image understanding through data and algorithmic advances. We see strong improvements on public and internal benchmarks for each of these tasks.1.5 Pro can now follow increasingly complex and nuanced instructions, including ones that specify product-level behavior involving role, format and style. We’ve improved control over the model’s responses for specific use cases, like crafting the persona and response style of a chat agent or automating workflows through multiple function calls. And we’ve enabled users to steer model behavior by setting system instructions.We added audio understanding in the Gemini API and Google AI Studio, so 1.5 Pro can now reason across image and audio for videos uploaded in Google AI Studio. And we’re now integrating 1.5 Pro into Google products, including Gemini Advanced and in Workspace apps.Read more about 1.5 Pro in our updated Gemini 1.5 technical report and on the Gemini technology page.Gemini Nano is expanding beyond text-only inputs to include images as well. Starting with Pixel, applications using Gemini Nano with Multimodality will be able to understand the world the way people do — not just through text, but also through sight, sound and spoken language.Read more about Gemini 1.0 Nano on Android.Today, we’re also sharing a series of updates to Gemma, our family of open models built from the same research and technology used to create the Gemini models.We’re announcing Gemma 2, our next generation of open models for responsible AI innovation. Gemma 2 has a new architecture designed for breakthrough performance and efficiency, and will be available in new sizes.The Gemma family is also expanding with PaliGemma, our first vision-language model inspired by PaLI-3. And we’ve upgraded our Responsible Generative AI Toolkit with LLM Comparator for evaluating the quality of model responses.Read more on the Developer blog.As part of Google DeepMind’s mission to build AI responsibly to benefit humanity, we’ve always wanted to develop universal AI agents that can be helpful in everyday life. That’s why today, we’re sharing our progress in building the future of AI assistants with Project Astra (advanced seeing and talking responsive agent).To be truly useful, an agent needs to understand and respond to the complex and dynamic world just like people do — and take in and remember what it sees and hears to understand context and take action. It also needs to be proactive, teachable and personal, so users can talk to it naturally and without lag or delay.While we’ve made incredible progress developing AI systems that can understand multimodal information, getting response time down to something conversational is a difficult engineering challenge. Over the past few years, we’ve been working to improve how our models perceive, reason and converse to make the pace and quality of interaction feel more natural.Building on Gemini, we’ve developed prototype agents that can process information faster by continuously encoding video frames, combining the video and speech input into a timeline of events, and caching this information for efficient recall.By leveraging our leading speech models, we also enhanced how they sound, giving the agents a wider range of intonations. These agents can better understand the context they’re being used in, and respond quickly, in conversation.With technology like this, it’s easy to envision a future where people could have an expert AI assistant by their side, through a phone or glasses. And some of these capabilities are coming to Google products, like the Gemini app and web experience, later this year.We’ve made incredible progress so far with our family of Gemini models, and we’re always striving to advance the state-of-the-art even further. By investing in a relentless production line of innovation, we’re able to explore new ideas at the frontier, while also unlocking the possibility of new and exciting Gemini use cases.Learn more about Gemini and its capabilities.Collection Sign up for our newsletters with product updates, event information, special offers, and more. Done. Just one step more. Check your inbox to confirm your subscription.</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>You can also subscribe with a different email address.
-  
-        Your information will be used in accordance with Google's privacy policy. You may opt out at any time.
-</code></pre></div></div>]]></content><author><name></name></author><category term="external-posts"/><category term="google"/><summary type="html"><![CDATA[We’re sharing updates across our Gemini family of models and a glimpse of Project Astra, our vision for the future of AI assistants.]]></summary></entry><entry><title type="html">a post with tabs</title><link href="https://alshedivat.github.io/al-folio/blog/2024/tabs/" rel="alternate" type="text/html" title="a post with tabs"/><published>2024-05-01T00:32:13+00:00</published><updated>2024-05-01T00:32:13+00:00</updated><id>https://alshedivat.github.io/al-folio/blog/2024/tabs</id><content type="html" xml:base="https://alshedivat.github.io/al-folio/blog/2024/tabs/"><![CDATA[<p>This is how a post with <a href="https://github.com/Ovski4/jekyll-tabs">tabs</a> looks like. Note that the tabs could be used for different purposes, not only for code.</p> <h2 id="first-tabs">First tabs</h2> <p>To add tabs, use the following syntax:</p> <div class="language-liquid highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">{%</span><span class="w"> </span><span class="nt">tabs</span><span class="w"> </span><span class="nv">group-name</span><span class="w"> </span><span class="cp">%}</span>
+<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">stack</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">perror</span><span class="p">(</span><span class="s">"Failed to allocate memory for child stack"</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">EXIT_FAILURE</span><span class="p">;</span>
+<span class="p">}</span>
 
-<span class="cp">{%</span><span class="w"> </span><span class="nt">tab</span><span class="w"> </span><span class="nv">group-name</span><span class="w"> </span><span class="nv">tab-name-1</span><span class="w"> </span><span class="cp">%}</span>
+<span class="kt">void</span> <span class="o">*</span><span class="n">stack_top</span> <span class="o">=</span> <span class="n">static_cast</span><span class="o">&lt;</span><span class="kt">char</span> <span class="o">*&gt;</span><span class="p">(</span><span class="n">stack</span><span class="p">)</span> <span class="o">+</span> <span class="n">STACK_SIZE</span><span class="p">;</span>
 
-Content 1
+<span class="n">pid_t</span> <span class="n">child_pid</span> <span class="o">=</span> <span class="n">clone</span><span class="p">(</span>
+    <span class="n">child_fn</span><span class="p">,</span>
+    <span class="n">stack_top</span><span class="p">,</span>
+    <span class="n">SIGCHLD</span> <span class="o">|</span> <span class="n">CLONE_NEWPID</span><span class="p">,</span>
+    <span class="n">nullptr</span>
+<span class="p">);</span>
+</code></pre></div></div> <p>The <code class="language-plaintext highlighter-rouge">clone</code> function in C takes in several arguments. The first argument is the function that is to be executed by the child process. The second argument is the child’s stack pointer (pointing to the top of the stack). The third argument is the most important, it holds the flags that can be passed by the caller. The flags dictate what to share and what to create. Namespaces are created by passing such flags (e.g. <code class="language-plaintext highlighter-rouge">CLONE_NEWPID</code> to create a new PID namespace, <code class="language-plaintext highlighter-rouge">CLONE_NEWNS</code> to create a new mount namespace, etc.) <code class="language-plaintext highlighter-rouge">clone</code> then calls the <code class="language-plaintext highlighter-rouge">copy_namespaces</code> function.</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/*
+ * called from clone.  This now handles copy for nsproxy and all
+ * namespaces therein.
+ */</span>
+<span class="kt">int</span> <span class="nf">copy_namespaces</span><span class="p">(</span><span class="n">u64</span> <span class="n">flags</span><span class="p">,</span> <span class="k">struct</span> <span class="n">task_struct</span> <span class="o">*</span><span class="n">tsk</span><span class="p">)</span>
+<span class="p">{</span>
+	<span class="k">struct</span> <span class="n">nsproxy</span> <span class="o">*</span><span class="n">old_ns</span> <span class="o">=</span> <span class="n">tsk</span><span class="o">-&gt;</span><span class="n">nsproxy</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">user_namespace</span> <span class="o">*</span><span class="n">user_ns</span> <span class="o">=</span> <span class="n">task_cred_xxx</span><span class="p">(</span><span class="n">tsk</span><span class="p">,</span> <span class="n">user_ns</span><span class="p">);</span>
+	<span class="k">struct</span> <span class="n">nsproxy</span> <span class="o">*</span><span class="n">new_ns</span><span class="p">;</span>
 
-<span class="cp">{%</span><span class="w"> </span><span class="nt">endtab</span><span class="w"> </span><span class="cp">%}</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">likely</span><span class="p">(</span><span class="o">!</span><span class="p">(</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">CLONE_NEWNS</span> <span class="o">|</span> <span class="n">CLONE_NEWUTS</span> <span class="o">|</span> <span class="n">CLONE_NEWIPC</span> <span class="o">|</span>
+			      <span class="n">CLONE_NEWPID</span> <span class="o">|</span> <span class="n">CLONE_NEWNET</span> <span class="o">|</span>
+			      <span class="n">CLONE_NEWCGROUP</span> <span class="o">|</span> <span class="n">CLONE_NEWTIME</span><span class="p">))))</span> <span class="p">{</span>
+		<span class="k">if</span> <span class="p">((</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="n">CLONE_VM</span><span class="p">)</span> <span class="o">||</span>
+		    <span class="n">likely</span><span class="p">(</span><span class="n">old_ns</span><span class="o">-&gt;</span><span class="n">time_ns_for_children</span> <span class="o">==</span> <span class="n">old_ns</span><span class="o">-&gt;</span><span class="n">time_ns</span><span class="p">))</span> <span class="p">{</span>
+			<span class="n">get_nsproxy</span><span class="p">(</span><span class="n">old_ns</span><span class="p">);</span>
+			<span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+		<span class="p">}</span>
+	<span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">ns_capable</span><span class="p">(</span><span class="n">user_ns</span><span class="p">,</span> <span class="n">CAP_SYS_ADMIN</span><span class="p">))</span>
+		<span class="k">return</span> <span class="o">-</span><span class="n">EPERM</span><span class="p">;</span>
 
-<span class="cp">{%</span><span class="w"> </span><span class="nt">tab</span><span class="w"> </span><span class="nv">group-name</span><span class="w"> </span><span class="nv">tab-name-2</span><span class="w"> </span><span class="cp">%}</span>
+	<span class="cm">/*
+	 * CLONE_NEWIPC must detach from the undolist: after switching
+	 * to a new ipc namespace, the semaphore arrays from the old
+	 * namespace are unreachable.  In clone parlance, CLONE_SYSVSEM
+	 * means share undolist with parent, so we must forbid using
+	 * it along with CLONE_NEWIPC.
+	 */</span>
+	<span class="k">if</span> <span class="p">((</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">CLONE_NEWIPC</span> <span class="o">|</span> <span class="n">CLONE_SYSVSEM</span><span class="p">))</span> <span class="o">==</span>
+		<span class="p">(</span><span class="n">CLONE_NEWIPC</span> <span class="o">|</span> <span class="n">CLONE_SYSVSEM</span><span class="p">))</span>
+		<span class="k">return</span> <span class="o">-</span><span class="n">EINVAL</span><span class="p">;</span>
 
-Content 2
+	<span class="n">new_ns</span> <span class="o">=</span> <span class="n">create_new_namespaces</span><span class="p">(</span><span class="n">flags</span><span class="p">,</span> <span class="n">tsk</span><span class="p">,</span> <span class="n">user_ns</span><span class="p">,</span> <span class="n">tsk</span><span class="o">-&gt;</span><span class="n">fs</span><span class="p">);</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">IS_ERR</span><span class="p">(</span><span class="n">new_ns</span><span class="p">))</span>
+		<span class="k">return</span>  <span class="n">PTR_ERR</span><span class="p">(</span><span class="n">new_ns</span><span class="p">);</span>
 
-<span class="cp">{%</span><span class="w"> </span><span class="nt">endtab</span><span class="w"> </span><span class="cp">%}</span>
+	<span class="k">if</span> <span class="p">((</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="n">CLONE_VM</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+		<span class="n">timens_on_fork</span><span class="p">(</span><span class="n">new_ns</span><span class="p">,</span> <span class="n">tsk</span><span class="p">);</span>
 
-<span class="cp">{%</span><span class="w"> </span><span class="nt">endtabs</span><span class="w"> </span><span class="cp">%}</span>
-</code></pre></div></div> <p>With this you can generate visualizations like:</p> <ul id="log" class="tab" data-tab="aee56658-3a22-448b-83c2-65fc2186dda9" data-name="log"> <li class="active" id="log-php"> <a href="#">php </a> </li> <li id="log-js"> <a href="#">js </a> </li> <li id="log-ruby"> <a href="#">ruby </a> </li> </ul> <ul class="tab-content" id="aee56658-3a22-448b-83c2-65fc2186dda9" data-name="log"> <li class="active"> <div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">var_dump</span><span class="p">(</span><span class="s1">'hello'</span><span class="p">);</span>
-</code></pre></div></div> </li> <li> <div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">console</span><span class="p">.</span><span class="nf">log</span><span class="p">(</span><span class="dl">"</span><span class="s2">hello</span><span class="dl">"</span><span class="p">);</span>
-</code></pre></div></div> </li> <li> <div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">pputs</span> <span class="dl">'</span><span class="s1">hello</span><span class="dl">'</span>
-</code></pre></div></div> </li> </ul> <h2 id="another-example">Another example</h2> <ul id="data-struct" class="tab" data-tab="3940e2aa-c8d8-4516-8bcb-6529a7891b18" data-name="data-struct"> <li class="active" id="data-struct-yaml"> <a href="#">yaml </a> </li> <li id="data-struct-json"> <a href="#">json </a> </li> </ul> <ul class="tab-content" id="3940e2aa-c8d8-4516-8bcb-6529a7891b18" data-name="data-struct"> <li class="active"> <div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">hello</span><span class="pi">:</span>
-  <span class="pi">-</span> <span class="s2">"</span><span class="s">whatsup"</span>
-  <span class="pi">-</span> <span class="s2">"</span><span class="s">hi"</span>
-</code></pre></div></div> </li> <li> <div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nl">"hello"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"whatsup"</span><span class="p">,</span><span class="w"> </span><span class="s2">"hi"</span><span class="p">]</span><span class="w">
-</span><span class="p">}</span><span class="w">
-</span></code></pre></div></div> </li> </ul> <h2 id="tabs-for-something-else">Tabs for something else</h2> <ul id="something-else" class="tab" data-tab="9909715d-e80e-49dc-a603-3553deed8c97" data-name="something-else"> <li class="active" id="something-else-text"> <a href="#">text </a> </li> <li id="something-else-quote"> <a href="#">quote </a> </li> <li id="something-else-list"> <a href="#">list </a> </li> </ul> <ul class="tab-content" id="9909715d-e80e-49dc-a603-3553deed8c97" data-name="something-else"> <li class="active"> <p>Regular text</p> </li> <li> <blockquote> <p>A quote</p> </blockquote> </li> <li> <p>Hipster list</p> <ul> <li>brunch</li> <li>fixie</li> <li>raybans</li> <li>messenger bag</li> </ul> </li> </ul>]]></content><author><name></name></author><category term="sample-posts"/><category term="formatting"/><category term="code"/><summary type="html"><![CDATA[this is what included tabs in a post could look like]]></summary></entry><entry><title type="html">a post with typograms</title><link href="https://alshedivat.github.io/al-folio/blog/2024/typograms/" rel="alternate" type="text/html" title="a post with typograms"/><published>2024-04-29T23:36:10+00:00</published><updated>2024-04-29T23:36:10+00:00</updated><id>https://alshedivat.github.io/al-folio/blog/2024/typograms</id><content type="html" xml:base="https://alshedivat.github.io/al-folio/blog/2024/typograms/"><![CDATA[<p>This is an example post with some <a href="https://github.com/google/typograms/">typograms</a> code.</p> <div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">```</span><span class="nl">typograms
-</span><span class="sb">+----+
-|    |---&gt; My first diagram!
-+----+</span>
-<span class="p">```</span>
-</code></pre></div></div> <p>Which generates:</p> <pre><code class="language-typograms">+----+
-|    |---&gt; My first diagram!
-+----+
-</code></pre> <p>Another example:</p> <div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">```</span><span class="nl">typograms
-</span><span class="sb">.------------------------.
-|.----------------------.|
-||"https://example.com" ||
-|'----------------------'|
-| ______________________ |
-||                      ||
-||   Welcome!           ||
-||                      ||
-||                      ||
-||  .----------------.  ||
-||  | username       |  ||
-||  '----------------'  ||
-||  .----------------.  ||
-||  |"*******"       |  ||
-||  '----------------'  ||
-||                      ||
-||  .----------------.  ||
-||  |   "Sign-up"    |  ||
-||  '----------------'  ||
-||                      ||
-|+----------------------+|
-.------------------------.</span>
-<span class="p">```</span>
-</code></pre></div></div> <p>which generates:</p> <pre><code class="language-typograms">.------------------------.
-|.----------------------.|
-||"https://example.com" ||
-|'----------------------'|
-| ______________________ |
-||                      ||
-||   Welcome!           ||
-||                      ||
-||                      ||
-||  .----------------.  ||
-||  | username       |  ||
-||  '----------------'  ||
-||  .----------------.  ||
-||  |"*******"       |  ||
-||  '----------------'  ||
-||                      ||
-||  .----------------.  ||
-||  |   "Sign-up"    |  ||
-||  '----------------'  ||
-||                      ||
-|+----------------------+|
-.------------------------.
-</code></pre> <p>For more examples, check out the <a href="https://google.github.io/typograms/#examples">typograms documentation</a>.</p>]]></content><author><name></name></author><category term="sample-posts"/><category term="formatting"/><category term="diagrams"/><summary type="html"><![CDATA[this is what included typograms code could look like]]></summary></entry><entry><title type="html">a post that can be cited</title><link href="https://alshedivat.github.io/al-folio/blog/2024/post-citation/" rel="alternate" type="text/html" title="a post that can be cited"/><published>2024-04-28T15:06:00+00:00</published><updated>2024-04-28T15:06:00+00:00</updated><id>https://alshedivat.github.io/al-folio/blog/2024/post-citation</id><content type="html" xml:base="https://alshedivat.github.io/al-folio/blog/2024/post-citation/"><![CDATA[<p>This is an example post that can be cited. The content of the post ends here, while the citation information is automatically provided below. The only thing needed is for you to set the <code class="language-plaintext highlighter-rouge">citation</code> key in the front matter to <code class="language-plaintext highlighter-rouge">true</code>.</p>]]></content><author><name></name></author><category term="sample-posts"/><category term="formatting"/><category term="citation"/><summary type="html"><![CDATA[this is what a post that can be cited looks like]]></summary></entry><entry><title type="html">a post with pseudo code</title><link href="https://alshedivat.github.io/al-folio/blog/2024/pseudocode/" rel="alternate" type="text/html" title="a post with pseudo code"/><published>2024-04-15T00:01:00+00:00</published><updated>2024-04-15T00:01:00+00:00</updated><id>https://alshedivat.github.io/al-folio/blog/2024/pseudocode</id><content type="html" xml:base="https://alshedivat.github.io/al-folio/blog/2024/pseudocode/"><![CDATA[<p>This is an example post with some pseudo code rendered by <a href="https://github.com/SaswatPadhi/pseudocode.js">pseudocode</a>. The example presented here is the same as the one in the <a href="https://saswat.padhi.me/pseudocode.js/">pseudocode.js</a> documentation, with only one simple but important change: everytime you would use <code class="language-plaintext highlighter-rouge">$</code>, you should use <code class="language-plaintext highlighter-rouge">$$</code> instead. Also, note that the <code class="language-plaintext highlighter-rouge">pseudocode</code> key in the front matter is set to <code class="language-plaintext highlighter-rouge">true</code> to enable the rendering of pseudo code. As an example, using this code:</p> <div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">```</span><span class="nl">pseudocode
-</span><span class="sb">% This quicksort algorithm is extracted from Chapter 7, Introduction to Algorithms (3rd edition)
-\begin{algorithm}
-\caption{Quicksort}
-\begin{algorithmic}
-\PROCEDURE{Quicksort}{$$A, p, r$$}
-    \IF{$$p &lt; r$$}
-        \STATE $$q = $$ \CALL{Partition}{$$A, p, r$$}
-        \STATE \CALL{Quicksort}{$$A, p, q - 1$$}
-        \STATE \CALL{Quicksort}{$$A, q + 1, r$$}
-    \ENDIF
-\ENDPROCEDURE
-\PROCEDURE{Partition}{$$A, p, r$$}
-    \STATE $$x = A[r]$$
-    \STATE $$i = p - 1$$
-    \FOR{$$j = p$$ \TO $$r - 1$$}
-        \IF{$$A[j] &lt; x$$}
-            \STATE $$i = i + 1$$
-            \STATE exchange
-            $$A[i]$$ with $$A[j]$$
-        \ENDIF
-        \STATE exchange $$A[i]$$ with $$A[r]$$
-    \ENDFOR
-\ENDPROCEDURE
-\end{algorithmic}
-\end{algorithm}</span>
-<span class="p">```</span>
-</code></pre></div></div> <p>Generates:</p> <pre><code class="language-pseudocode">% This quicksort algorithm is extracted from Chapter 7, Introduction to Algorithms (3rd edition)
-\begin{algorithm}
-\caption{Quicksort}
-\begin{algorithmic}
-\PROCEDURE{Quicksort}{$$A, p, r$$}
-    \IF{$$p &lt; r$$}
-        \STATE $$q = $$ \CALL{Partition}{$$A, p, r$$}
-        \STATE \CALL{Quicksort}{$$A, p, q - 1$$}
-        \STATE \CALL{Quicksort}{$$A, q + 1, r$$}
-    \ENDIF
-\ENDPROCEDURE
-\PROCEDURE{Partition}{$$A, p, r$$}
-    \STATE $$x = A[r]$$
-    \STATE $$i = p - 1$$
-    \FOR{$$j = p$$ \TO $$r - 1$$}
-        \IF{$$A[j] &lt; x$$}
-            \STATE $$i = i + 1$$
-            \STATE exchange
-            $$A[i]$$ with $$A[j]$$
-        \ENDIF
-        \STATE exchange $$A[i]$$ with $$A[r]$$
-    \ENDFOR
-\ENDPROCEDURE
-\end{algorithmic}
-\end{algorithm}
-</code></pre>]]></content><author><name></name></author><category term="sample-posts"/><category term="formatting"/><category term="code"/><summary type="html"><![CDATA[this is what included pseudo code could look like]]></summary></entry><entry><title type="html">a post with code diff</title><link href="https://alshedivat.github.io/al-folio/blog/2024/code-diff/" rel="alternate" type="text/html" title="a post with code diff"/><published>2024-01-27T19:22:00+00:00</published><updated>2024-01-27T19:22:00+00:00</updated><id>https://alshedivat.github.io/al-folio/blog/2024/code-diff</id><content type="html" xml:base="https://alshedivat.github.io/al-folio/blog/2024/code-diff/"><![CDATA[<p>You can display diff code by using the regular markdown syntax:</p> <div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">```</span><span class="nl">diff
-</span><span class="gh">diff --git a/sample.js b/sample.js
-index 0000001..0ddf2ba
-</span><span class="gd">--- a/sample.js
-</span><span class="gi">+++ b/sample.js
-</span><span class="p">@@ -1 +1 @@</span>
-<span class="gd">-console.log("Hello World!")
-</span><span class="gi">+console.log("Hello from Diff2Html!")</span>
-<span class="p">```</span>
-</code></pre></div></div> <p>Which generates:</p> <div class="language-diff highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="gh">diff --git a/sample.js b/sample.js
-index 0000001..0ddf2ba
-</span><span class="gd">--- a/sample.js
-</span><span class="gi">+++ b/sample.js
-</span><span class="p">@@ -1 +1 @@</span>
-<span class="gd">-console.log("Hello World!")
-</span><span class="gi">+console.log("Hello from Diff2Html!")
-</span></code></pre></div></div> <p>But this is difficult to read, specially if you have a large diff. You can use <a href="https://diff2html.xyz/">diff2html</a> to display a more readable version of the diff. For this, just use <code class="language-plaintext highlighter-rouge">diff2html</code> instead of <code class="language-plaintext highlighter-rouge">diff</code> for the code block language:</p> <div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">```</span><span class="nl">diff2html
-</span><span class="sb">diff --git a/sample.js b/sample.js
-index 0000001..0ddf2ba
---- a/sample.js
-+++ b/sample.js
-@@ -1 +1 @@
--console.log("Hello World!")
-+console.log("Hello from Diff2Html!")</span>
-<span class="p">```</span>
-</code></pre></div></div> <p>If we use a longer example, for example <a href="https://github.com/rtfpessoa/diff2html/commit/c2c253d3e3f8b8b267f551e659f72b44ca2ac927">this commit from diff2html</a>, it will generate the following output:</p> <pre><code class="language-diff2html">From 2aaae31cc2a37bfff83430c2c914b140bee59b6a Mon Sep 17 00:00:00 2001
-From: Rodrigo Fernandes &lt;rtfrodrigo@gmail.com&gt;
-Date: Sun, 9 Oct 2016 16:41:54 +0100
-Subject: [PATCH 1/2] Initial template override support
+	<span class="n">tsk</span><span class="o">-&gt;</span><span class="n">nsproxy</span> <span class="o">=</span> <span class="n">new_ns</span><span class="p">;</span>
+	<span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div> <p>Let’s try to dissect this function.</p> <p>First, the parent’s <code class="language-plaintext highlighter-rouge">nsproxy</code> is retrieved along with the user namespace.</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">nsproxy</span> <span class="o">*</span><span class="n">old_ns</span> <span class="o">=</span> <span class="n">tsk</span><span class="o">-&gt;</span><span class="n">nsproxy</span><span class="p">;</span>
+<span class="k">struct</span> <span class="n">user_namespace</span> <span class="o">*</span><span class="n">user_ns</span> <span class="o">=</span> <span class="n">task_cred_xxx</span><span class="p">(</span><span class="n">tsk</span><span class="p">,</span> <span class="n">user_ns</span><span class="p">);</span>
+</code></pre></div></div> <p>Then it sees whether or not any new namespaces are requested. It checks if the flags contain any of the new namespace flags. If no namespaces are requested, it shares the parent’s <code class="language-plaintext highlighter-rouge">nsproxy</code>.</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">if</span> <span class="p">(</span><span class="n">likely</span><span class="p">(</span><span class="o">!</span><span class="p">(</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">CLONE_NEWNS</span> <span class="o">|</span> <span class="n">CLONE_NEWUTS</span> <span class="o">|</span> <span class="n">CLONE_NEWIPC</span> <span class="o">|</span>
+                <span class="n">CLONE_NEWPID</span> <span class="o">|</span> <span class="n">CLONE_NEWNET</span> <span class="o">|</span>
+                <span class="n">CLONE_NEWCGROUP</span> <span class="o">|</span> <span class="n">CLONE_NEWTIME</span><span class="p">))))</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">((</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="n">CLONE_VM</span><span class="p">)</span> <span class="o">||</span>
+        <span class="n">likely</span><span class="p">(</span><span class="n">old_ns</span><span class="o">-&gt;</span><span class="n">time_ns_for_children</span> <span class="o">==</span> <span class="n">old_ns</span><span class="o">-&gt;</span><span class="n">time_ns</span><span class="p">))</span> <span class="p">{</span>
+        <span class="n">get_nsproxy</span><span class="p">(</span><span class="n">old_ns</span><span class="p">);</span>
+        <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div> <p>If new namespaces are to be created, it checks whether the caller has permission. Specifically, the caller must have <code class="language-plaintext highlighter-rouge">CAP_SYS_ADMIN</code> in its user namespace.</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">ns_capable</span><span class="p">(</span><span class="n">user_ns</span><span class="p">,</span> <span class="n">CAP_SYS_ADMIN</span><span class="p">))</span>
+	<span class="k">return</span> <span class="o">-</span><span class="n">EPERM</span><span class="p">;</span>
+</code></pre></div></div> <p>Then, it creates the new namespaces.</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">new_ns</span> <span class="o">=</span> <span class="n">create_new_namespaces</span><span class="p">(</span><span class="n">flags</span><span class="p">,</span> <span class="n">tsk</span><span class="p">,</span> <span class="n">user_ns</span><span class="p">,</span> <span class="n">tsk</span><span class="o">-&gt;</span><span class="n">fs</span><span class="p">);</span>
+<span class="n">tsk</span><span class="o">-&gt;</span><span class="n">nsproxy</span> <span class="o">=</span> <span class="n">new_ns</span><span class="p">;</span>
+</code></pre></div></div> <p>In the end, the new child task will have a pointer to <code class="language-plaintext highlighter-rouge">new_ns</code>, whether it may be the same as its parent or a copy created on write version of it.</p> <blockquote> <p>Note: The newly created <code class="language-plaintext highlighter-rouge">task_struct</code> will by default have its <code class="language-plaintext highlighter-rouge">nsproxy</code> initialized to point at the parent’s <code class="language-plaintext highlighter-rouge">nsproxy</code>.</p> </blockquote> <p>Now, one must wonder what the <code class="language-plaintext highlighter-rouge">create_new_namespaces</code> function does (I hope you are).</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/*
+ * Create new nsproxy and all of its the associated namespaces.
+ * Return the newly created nsproxy.  Do not attach this to the task,
+ * leave it to the caller to do proper locking and attach it to task.
+ */</span>
+<span class="k">static</span> <span class="k">struct</span> <span class="n">nsproxy</span> <span class="o">*</span><span class="nf">create_new_namespaces</span><span class="p">(</span><span class="n">u64</span> <span class="n">flags</span><span class="p">,</span>
+	<span class="k">struct</span> <span class="n">task_struct</span> <span class="o">*</span><span class="n">tsk</span><span class="p">,</span> <span class="k">struct</span> <span class="n">user_namespace</span> <span class="o">*</span><span class="n">user_ns</span><span class="p">,</span>
+	<span class="k">struct</span> <span class="n">fs_struct</span> <span class="o">*</span><span class="n">new_fs</span><span class="p">)</span>
+<span class="p">{</span>
+	<span class="k">struct</span> <span class="n">nsproxy</span> <span class="o">*</span><span class="n">new_nsp</span><span class="p">;</span>
+	<span class="kt">int</span> <span class="n">err</span><span class="p">;</span>
 
----
- scripts/hulk.js                    |  4 ++--
- src/diff2html.js                   |  3 +--
- src/file-list-printer.js           | 11 ++++++++---
- src/hoganjs-utils.js               | 29 +++++++++++++++++------------
- src/html-printer.js                |  6 ++++++
- src/line-by-line-printer.js        |  6 +++++-
- src/side-by-side-printer.js        |  6 +++++-
- test/file-list-printer-tests.js    |  2 +-
- test/hogan-cache-tests.js          | 18 +++++++++++++++---
- test/line-by-line-tests.js         |  3 +--
- test/side-by-side-printer-tests.js |  3 +--
- 11 files changed, 62 insertions(+), 29 deletions(-)
+	<span class="n">new_nsp</span> <span class="o">=</span> <span class="n">create_nsproxy</span><span class="p">();</span>
+	<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">new_nsp</span><span class="p">)</span>
+		<span class="k">return</span> <span class="n">ERR_PTR</span><span class="p">(</span><span class="o">-</span><span class="n">ENOMEM</span><span class="p">);</span>
 
-diff --git a/scripts/hulk.js b/scripts/hulk.js
-index 5a793c18..a4b1a4d5 100755
---- a/scripts/hulk.js
-+++ b/scripts/hulk.js
-@@ -173,11 +173,11 @@ function namespace(name) {
- // write a template foreach file that matches template extension
- templates = extractFiles(options.argv.remain)
-   .map(function(file) {
--    var openedFile = fs.readFileSync(file, 'utf-8');
-+    var openedFile = fs.readFileSync(file, 'utf-8').trim();
-     var name;
-     if (!openedFile) return;
-     name = namespace(path.basename(file).replace(/\..*$/, ''));
--    openedFile = removeByteOrderMark(openedFile.trim());
-+    openedFile = removeByteOrderMark(openedFile);
-     openedFile = wrap(file, name, openedFile);
-     if (!options.outputdir) return openedFile;
-     fs.writeFileSync(path.join(options.outputdir, name + '.js')
-diff --git a/src/diff2html.js b/src/diff2html.js
-index 21b0119e..64e138f5 100644
---- a/src/diff2html.js
-+++ b/src/diff2html.js
-@@ -7,7 +7,6 @@
+	<span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">mnt_ns</span> <span class="o">=</span> <span class="n">copy_mnt_ns</span><span class="p">(</span><span class="n">flags</span><span class="p">,</span> <span class="n">tsk</span><span class="o">-&gt;</span><span class="n">nsproxy</span><span class="o">-&gt;</span><span class="n">mnt_ns</span><span class="p">,</span> <span class="n">user_ns</span><span class="p">,</span> <span class="n">new_fs</span><span class="p">);</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">IS_ERR</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">mnt_ns</span><span class="p">))</span> <span class="p">{</span>
+		<span class="n">err</span> <span class="o">=</span> <span class="n">PTR_ERR</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">mnt_ns</span><span class="p">);</span>
+		<span class="k">goto</span> <span class="n">out_ns</span><span class="p">;</span>
+	<span class="p">}</span>
 
- (function() {
-   var diffParser = require('./diff-parser.js').DiffParser;
--  var fileLister = require('./file-list-printer.js').FileListPrinter;
-   var htmlPrinter = require('./html-printer.js').HtmlPrinter;
+	<span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">uts_ns</span> <span class="o">=</span> <span class="n">copy_utsname</span><span class="p">(</span><span class="n">flags</span><span class="p">,</span> <span class="n">user_ns</span><span class="p">,</span> <span class="n">tsk</span><span class="o">-&gt;</span><span class="n">nsproxy</span><span class="o">-&gt;</span><span class="n">uts_ns</span><span class="p">);</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">IS_ERR</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">uts_ns</span><span class="p">))</span> <span class="p">{</span>
+		<span class="n">err</span> <span class="o">=</span> <span class="n">PTR_ERR</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">uts_ns</span><span class="p">);</span>
+		<span class="k">goto</span> <span class="n">out_uts</span><span class="p">;</span>
+	<span class="p">}</span>
 
-   function Diff2Html() {
-@@ -43,7 +42,7 @@
+	<span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">ipc_ns</span> <span class="o">=</span> <span class="n">copy_ipcs</span><span class="p">(</span><span class="n">flags</span><span class="p">,</span> <span class="n">user_ns</span><span class="p">,</span> <span class="n">tsk</span><span class="o">-&gt;</span><span class="n">nsproxy</span><span class="o">-&gt;</span><span class="n">ipc_ns</span><span class="p">);</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">IS_ERR</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">ipc_ns</span><span class="p">))</span> <span class="p">{</span>
+		<span class="n">err</span> <span class="o">=</span> <span class="n">PTR_ERR</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">ipc_ns</span><span class="p">);</span>
+		<span class="k">goto</span> <span class="n">out_ipc</span><span class="p">;</span>
+	<span class="p">}</span>
 
-     var fileList = '';
-     if (configOrEmpty.showFiles === true) {
--      fileList = fileLister.generateFileList(diffJson, configOrEmpty);
-+      fileList = htmlPrinter.generateFileListSummary(diffJson, configOrEmpty);
-     }
+	<span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">pid_ns_for_children</span> <span class="o">=</span>
+		<span class="n">copy_pid_ns</span><span class="p">(</span><span class="n">flags</span><span class="p">,</span> <span class="n">user_ns</span><span class="p">,</span> <span class="n">tsk</span><span class="o">-&gt;</span><span class="n">nsproxy</span><span class="o">-&gt;</span><span class="n">pid_ns_for_children</span><span class="p">);</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">IS_ERR</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">pid_ns_for_children</span><span class="p">))</span> <span class="p">{</span>
+		<span class="n">err</span> <span class="o">=</span> <span class="n">PTR_ERR</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">pid_ns_for_children</span><span class="p">);</span>
+		<span class="k">goto</span> <span class="n">out_pid</span><span class="p">;</span>
+	<span class="p">}</span>
 
-     var diffOutput = '';
-diff --git a/src/file-list-printer.js b/src/file-list-printer.js
-index e408d9b2..1e0a2c61 100644
---- a/src/file-list-printer.js
-+++ b/src/file-list-printer.js
-@@ -8,11 +8,16 @@
- (function() {
-   var printerUtils = require('./printer-utils.js').PrinterUtils;
+	<span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">cgroup_ns</span> <span class="o">=</span> <span class="n">copy_cgroup_ns</span><span class="p">(</span><span class="n">flags</span><span class="p">,</span> <span class="n">user_ns</span><span class="p">,</span>
+					    <span class="n">tsk</span><span class="o">-&gt;</span><span class="n">nsproxy</span><span class="o">-&gt;</span><span class="n">cgroup_ns</span><span class="p">);</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">IS_ERR</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">cgroup_ns</span><span class="p">))</span> <span class="p">{</span>
+		<span class="n">err</span> <span class="o">=</span> <span class="n">PTR_ERR</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">cgroup_ns</span><span class="p">);</span>
+		<span class="k">goto</span> <span class="n">out_cgroup</span><span class="p">;</span>
+	<span class="p">}</span>
 
--  var hoganUtils = require('./hoganjs-utils.js').HoganJsUtils;
-+  var hoganUtils;
-+
-   var baseTemplatesPath = 'file-summary';
-   var iconsBaseTemplatesPath = 'icon';
+	<span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">net_ns</span> <span class="o">=</span> <span class="n">copy_net_ns</span><span class="p">(</span><span class="n">flags</span><span class="p">,</span> <span class="n">user_ns</span><span class="p">,</span> <span class="n">tsk</span><span class="o">-&gt;</span><span class="n">nsproxy</span><span class="o">-&gt;</span><span class="n">net_ns</span><span class="p">);</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">IS_ERR</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">net_ns</span><span class="p">))</span> <span class="p">{</span>
+		<span class="n">err</span> <span class="o">=</span> <span class="n">PTR_ERR</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">net_ns</span><span class="p">);</span>
+		<span class="k">goto</span> <span class="n">out_net</span><span class="p">;</span>
+	<span class="p">}</span>
 
--  function FileListPrinter() {
-+  function FileListPrinter(config) {
-+    this.config = config;
-+
-+    var HoganJsUtils = require('./hoganjs-utils.js').HoganJsUtils;
-+    hoganUtils = new HoganJsUtils(config);
-   }
+	<span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">time_ns_for_children</span> <span class="o">=</span> <span class="n">copy_time_ns</span><span class="p">(</span><span class="n">flags</span><span class="p">,</span> <span class="n">user_ns</span><span class="p">,</span>
+					<span class="n">tsk</span><span class="o">-&gt;</span><span class="n">nsproxy</span><span class="o">-&gt;</span><span class="n">time_ns_for_children</span><span class="p">);</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">IS_ERR</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">time_ns_for_children</span><span class="p">))</span> <span class="p">{</span>
+		<span class="n">err</span> <span class="o">=</span> <span class="n">PTR_ERR</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">time_ns_for_children</span><span class="p">);</span>
+		<span class="k">goto</span> <span class="n">out_time</span><span class="p">;</span>
+	<span class="p">}</span>
+	<span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">time_ns</span> <span class="o">=</span> <span class="n">get_time_ns</span><span class="p">(</span><span class="n">tsk</span><span class="o">-&gt;</span><span class="n">nsproxy</span><span class="o">-&gt;</span><span class="n">time_ns</span><span class="p">);</span>
 
-   FileListPrinter.prototype.generateFileList = function(diffFiles) {
-@@ -38,5 +43,5 @@
-     });
-   };
+	<span class="k">return</span> <span class="n">new_nsp</span><span class="p">;</span>
 
--  module.exports.FileListPrinter = new FileListPrinter();
-+  module.exports.FileListPrinter = FileListPrinter;
- })();
-diff --git a/src/hoganjs-utils.js b/src/hoganjs-utils.js
-index 9949e5fa..0dda08d7 100644
---- a/src/hoganjs-utils.js
-+++ b/src/hoganjs-utils.js
-@@ -8,18 +8,19 @@
- (function() {
-   var fs = require('fs');
-   var path = require('path');
--
-   var hogan = require('hogan.js');
+<span class="nl">out_time:</span>
+	<span class="n">put_net</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">net_ns</span><span class="p">);</span>
+<span class="nl">out_net:</span>
+	<span class="n">put_cgroup_ns</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">cgroup_ns</span><span class="p">);</span>
+<span class="nl">out_cgroup:</span>
+	<span class="n">put_pid_ns</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">pid_ns_for_children</span><span class="p">);</span>
+<span class="nl">out_pid:</span>
+	<span class="n">put_ipc_ns</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">ipc_ns</span><span class="p">);</span>
+<span class="nl">out_ipc:</span>
+	<span class="n">put_uts_ns</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">uts_ns</span><span class="p">);</span>
+<span class="nl">out_uts:</span>
+	<span class="n">put_mnt_ns</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">mnt_ns</span><span class="p">);</span>
+<span class="nl">out_ns:</span>
+	<span class="n">kmem_cache_free</span><span class="p">(</span><span class="n">nsproxy_cachep</span><span class="p">,</span> <span class="n">new_nsp</span><span class="p">);</span>
+	<span class="k">return</span> <span class="n">ERR_PTR</span><span class="p">(</span><span class="n">err</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div> <p>First it initializes an empty <code class="language-plaintext highlighter-rouge">nsproxy</code>. Then, for each individual namespace (say PID namespace), it checks if the flag has that particular namespace (if <code class="language-plaintext highlighter-rouge">flag &amp; CLONE_NEWPID</code>). If it does, it creates a brand new namespace, otherwise it will reuse the existing namespace by incrementing the reference count.</p> <p>Here’s an example for PID namespaces:</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">pid_namespace</span> <span class="o">*</span><span class="nf">copy_pid_ns</span><span class="p">(</span><span class="n">u64</span> <span class="n">flags</span><span class="p">,</span>
+	<span class="k">struct</span> <span class="n">user_namespace</span> <span class="o">*</span><span class="n">user_ns</span><span class="p">,</span> <span class="k">struct</span> <span class="n">pid_namespace</span> <span class="o">*</span><span class="n">old_ns</span><span class="p">)</span>
+<span class="p">{</span>
+	<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="p">(</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="n">CLONE_NEWPID</span><span class="p">))</span>
+		<span class="k">return</span> <span class="n">get_pid_ns</span><span class="p">(</span><span class="n">old_ns</span><span class="p">);</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">task_active_pid_ns</span><span class="p">(</span><span class="n">current</span><span class="p">)</span> <span class="o">!=</span> <span class="n">old_ns</span><span class="p">)</span>
+		<span class="k">return</span> <span class="n">ERR_PTR</span><span class="p">(</span><span class="o">-</span><span class="n">EINVAL</span><span class="p">);</span>
+	<span class="k">return</span> <span class="n">create_pid_namespace</span><span class="p">(</span><span class="n">user_ns</span><span class="p">,</span> <span class="n">old_ns</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div> <h2 id="namespaces-from-the-kernels-pov">Namespaces from the Kernel’s POV</h2> <p>Now that we know how namespaces are created for each task, we can be curious about how namespaces are represented by the kernel, hopefully curiosity doesn’t kill the engineer.</p> <p>Let’s take a closer look at <code class="language-plaintext highlighter-rouge">struct pid_namespace</code>.</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">pid_namespace</span> <span class="p">{</span>
+	<span class="k">struct</span> <span class="n">idr</span> <span class="n">idr</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">rcu_head</span> <span class="n">rcu</span><span class="p">;</span>
+	<span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">pid_allocated</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">task_struct</span> <span class="o">*</span><span class="n">child_reaper</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">kmem_cache</span> <span class="o">*</span><span class="n">pid_cachep</span><span class="p">;</span>
+	<span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">level</span><span class="p">;</span>
+	<span class="kt">int</span> <span class="n">pid_max</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">pid_namespace</span> <span class="o">*</span><span class="n">parent</span><span class="p">;</span>
+<span class="cp">#ifdef CONFIG_BSD_PROCESS_ACCT
+</span>	<span class="k">struct</span> <span class="n">fs_pin</span> <span class="o">*</span><span class="n">bacct</span><span class="p">;</span>
+<span class="cp">#endif
+</span>	<span class="k">struct</span> <span class="n">user_namespace</span> <span class="o">*</span><span class="n">user_ns</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">ucounts</span> <span class="o">*</span><span class="n">ucounts</span><span class="p">;</span>
+	<span class="kt">int</span> <span class="n">reboot</span><span class="p">;</span>	<span class="cm">/* group exit code if this pidns was rebooted */</span>
+	<span class="k">struct</span> <span class="n">ns_common</span> <span class="n">ns</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">work_struct</span>	<span class="n">work</span><span class="p">;</span>
+<span class="cp">#ifdef CONFIG_SYSCTL
+</span>	<span class="k">struct</span> <span class="n">ctl_table_set</span>	<span class="n">set</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">ctl_table_header</span> <span class="o">*</span><span class="n">sysctls</span><span class="p">;</span>
+<span class="cp">#if defined(CONFIG_MEMFD_CREATE)
+</span>	<span class="kt">int</span> <span class="n">memfd_noexec_scope</span><span class="p">;</span>
+<span class="cp">#endif
+#endif
+</span><span class="p">}</span> <span class="n">__randomize_layout</span><span class="p">;</span>
+</code></pre></div></div> <p>You know what, we can find more patterns if we use another one. Here’s <code class="language-plaintext highlighter-rouge">struct mnt_namespace</code>:</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">mnt_namespace</span> <span class="p">{</span>
+	<span class="k">struct</span> <span class="n">ns_common</span>	<span class="n">ns</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">mount</span> <span class="o">*</span>	<span class="n">root</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="p">{</span>
+		<span class="k">struct</span> <span class="n">rb_root</span>	<span class="n">mounts</span><span class="p">;</span>		 <span class="cm">/* Protected by namespace_sem */</span>
+		<span class="k">struct</span> <span class="n">rb_node</span>	<span class="o">*</span><span class="n">mnt_last_node</span><span class="p">;</span>	 <span class="cm">/* last (rightmost) mount in the rbtree */</span>
+		<span class="k">struct</span> <span class="n">rb_node</span>	<span class="o">*</span><span class="n">mnt_first_node</span><span class="p">;</span> <span class="cm">/* first (leftmost) mount in the rbtree */</span>
+	<span class="p">};</span>
+	<span class="k">struct</span> <span class="n">user_namespace</span>	<span class="o">*</span><span class="n">user_ns</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">ucounts</span>		<span class="o">*</span><span class="n">ucounts</span><span class="p">;</span>
+	<span class="n">wait_queue_head_t</span>	<span class="n">poll</span><span class="p">;</span>
+	<span class="n">u64</span>			<span class="n">seq_origin</span><span class="p">;</span> <span class="cm">/* Sequence number of origin mount namespace */</span>
+	<span class="n">u64</span> <span class="n">event</span><span class="p">;</span>
+<span class="cp">#ifdef CONFIG_FSNOTIFY
+</span>	<span class="n">__u32</span>			<span class="n">n_fsnotify_mask</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">fsnotify_mark_connector</span> <span class="n">__rcu</span> <span class="o">*</span><span class="n">n_fsnotify_marks</span><span class="p">;</span>
+<span class="cp">#endif
+</span>	<span class="kt">unsigned</span> <span class="kt">int</span>		<span class="n">nr_mounts</span><span class="p">;</span> <span class="cm">/* # of mounts in the namespace */</span>
+	<span class="kt">unsigned</span> <span class="kt">int</span>		<span class="n">pending_mounts</span><span class="p">;</span>
+	<span class="n">refcount_t</span>		<span class="n">passive</span><span class="p">;</span> <span class="cm">/* number references not pinning @mounts */</span>
+<span class="p">}</span> <span class="n">__randomize_layout</span><span class="p">;</span>
+</code></pre></div></div> <p>Namespaces have a generic <code class="language-plaintext highlighter-rouge">ns</code> field which contains a <code class="language-plaintext highlighter-rouge">struct ns_common</code>.</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">ns_common</span> <span class="p">{</span>
+	<span class="n">u32</span> <span class="n">ns_type</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">dentry</span> <span class="o">*</span><span class="n">stashed</span><span class="p">;</span>
+	<span class="k">const</span> <span class="k">struct</span> <span class="n">proc_ns_operations</span> <span class="o">*</span><span class="n">ops</span><span class="p">;</span>
+	<span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">inum</span><span class="p">;</span>
+	<span class="n">refcount_t</span> <span class="n">__ns_ref</span><span class="p">;</span> <span class="cm">/* do not use directly */</span>
+	<span class="k">union</span> <span class="p">{</span>
+		<span class="k">struct</span> <span class="p">{</span>
+			<span class="n">u64</span> <span class="n">ns_id</span><span class="p">;</span>
+			<span class="k">struct</span> <span class="n">rb_node</span> <span class="n">ns_tree_node</span><span class="p">;</span>
+			<span class="k">struct</span> <span class="n">list_head</span> <span class="n">ns_list_node</span><span class="p">;</span>
+		<span class="p">};</span>
+		<span class="k">struct</span> <span class="n">rcu_head</span> <span class="n">ns_rcu</span><span class="p">;</span>
+	<span class="p">};</span>
+<span class="p">};</span>
+</code></pre></div></div> <p><code class="language-plaintext highlighter-rouge">ns_common</code> serves as the kernel’s generic “base struct” for namespaces. It lets the kernel identify namespaces, expose namespaces to user space (e.g. via <code class="language-plaintext highlighter-rouge">/proc/&lt;pid&gt;/ns/*</code>), manage namespace lifetimes (by refcounting and RCU), and track namespaces globally.</p> <p>Each namespace struct also commonly have a user namespace field, mainly for permissions checking.</p> <h2 id="getpid-in-a-pid-namespace"><code class="language-plaintext highlighter-rouge">getpid()</code> in a PID Namespace</h2> <p>We have seen how namespaces are created and what namespaces look like, but practically, we want to know how is it used. For example, how is it possible that <code class="language-plaintext highlighter-rouge">getpid()</code> in a user namespace yields a different result if the same process exists in a different namespace.</p> <p>I made a simple C (actually C++) code that creates a child process in a PID namespace. The parent prints the PID of the child process from the perspective of the parent and the child does the same. The code looks like this:</p> <div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#define _GNU_SOURCE
+#include</span> <span class="cpf">&lt;sched.h&gt;</span><span class="cp">
+#include</span> <span class="cpf">&lt;signal.h&gt;</span><span class="cp">
+#include</span> <span class="cpf">&lt;sys/wait.h&gt;</span><span class="cp">
+#include</span> <span class="cpf">&lt;unistd.h&gt;</span><span class="cp">
+</span>
+<span class="cp">#include</span> <span class="cpf">&lt;cstdlib&gt;</span><span class="cp">
+#include</span> <span class="cpf">&lt;iostream&gt;</span><span class="cp">
+</span>
+<span class="k">constexpr</span> <span class="kt">size_t</span> <span class="n">STACK_SIZE</span> <span class="o">=</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">;</span>
 
-   var hoganTemplates = require('./templates/diff2html-templates.js');
+<span class="kt">int</span> <span class="nf">child_fn</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">arg</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"[child] getpid() = "</span> <span class="o">&lt;&lt;</span> <span class="n">getpid</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"[child] getppid() = "</span> <span class="o">&lt;&lt;</span> <span class="n">getppid</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
 
--  var templatesPath = path.resolve(__dirname, 'templates');
-+  var extraTemplates;
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"[parent] getpid() = "</span> <span class="o">&lt;&lt;</span> <span class="n">getpid</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"[parent] getppid() = "</span> <span class="o">&lt;&lt;</span> <span class="n">getppid</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
 
--  function HoganJsUtils() {
-+  function HoganJsUtils(configuration) {
-+    this.config = configuration || {};
-+    extraTemplates = this.config.templates || {};
-   }
+    <span class="kt">void</span> <span class="o">*</span><span class="n">stack</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">malloc</span><span class="p">(</span><span class="n">STACK_SIZE</span><span class="p">);</span>
 
--  HoganJsUtils.prototype.render = function(namespace, view, params, configuration) {
--    var template = this.template(namespace, view, configuration);
-+  HoganJsUtils.prototype.render = function(namespace, view, params) {
-+    var template = this.template(namespace, view);
-     if (template) {
-       return template.render(params);
-     }
-@@ -27,17 +28,16 @@
-     return null;
-   };
+    <span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">stack</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">perror</span><span class="p">(</span><span class="s">"Failed to allocate memory for child stack"</span><span class="p">);</span>
+        <span class="k">return</span> <span class="n">EXIT_FAILURE</span><span class="p">;</span>
+    <span class="p">}</span>
 
--  HoganJsUtils.prototype.template = function(namespace, view, configuration) {
--    var config = configuration || {};
-+  HoganJsUtils.prototype.template = function(namespace, view) {
-     var templateKey = this._templateKey(namespace, view);
+    <span class="kt">void</span> <span class="o">*</span><span class="n">stack_top</span> <span class="o">=</span> <span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">char</span> <span class="o">*&gt;</span><span class="p">(</span><span class="n">stack</span><span class="p">)</span> <span class="o">+</span> <span class="n">STACK_SIZE</span><span class="p">;</span>
 
--    return this._getTemplate(templateKey, config);
-+    return this._getTemplate(templateKey);
-   };
+    <span class="n">pid_t</span> <span class="n">child_pid</span> <span class="o">=</span> <span class="n">clone</span><span class="p">(</span>
+        <span class="n">child_fn</span><span class="p">,</span>
+        <span class="n">stack_top</span><span class="p">,</span>
+        <span class="n">SIGCHLD</span> <span class="o">|</span> <span class="n">CLONE_NEWPID</span><span class="p">,</span>
+        <span class="nb">nullptr</span>
+    <span class="p">);</span>
 
--  HoganJsUtils.prototype._getTemplate = function(templateKey, config) {
-+  HoganJsUtils.prototype._getTemplate = function(templateKey) {
-     var template;
+    <span class="k">if</span><span class="p">(</span><span class="n">child_pid</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">perror</span><span class="p">(</span><span class="s">"Failed to create child process"</span><span class="p">);</span>
+        <span class="n">std</span><span class="o">::</span><span class="n">free</span><span class="p">(</span><span class="n">stack</span><span class="p">);</span>
+        <span class="k">return</span> <span class="n">EXIT_FAILURE</span><span class="p">;</span>
+    <span class="p">}</span>
 
--    if (!config.noCache) {
-+    if (!this.config.noCache) {
-       template = this._readFromCache(templateKey);
-     }
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"[parent] Created child process with PID: "</span> <span class="o">&lt;&lt;</span> <span class="n">child_pid</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
 
-@@ -53,6 +53,7 @@
+    <span class="kt">int</span> <span class="n">status</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="n">waitpid</span><span class="p">(</span><span class="n">child_pid</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">status</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
 
-     try {
-       if (fs.readFileSync) {
-+        var templatesPath = path.resolve(__dirname, 'templates');
-         var templatePath = path.join(templatesPath, templateKey);
-         var templateContent = fs.readFileSync(templatePath + '.mustache', 'utf8');
-         template = hogan.compile(templateContent);
-@@ -66,12 +67,16 @@
-   };
+    <span class="n">std</span><span class="o">::</span><span class="n">free</span><span class="p">(</span><span class="n">stack</span><span class="p">);</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>g++ <span class="nt">-D_GNU_SOURCE</span> <span class="nt">-std</span><span class="o">=</span>c++23 <span class="nt">-Wall</span> <span class="nt">-Wextra</span> pidns_getpid.cpp <span class="nt">-o</span> pidns_getpid
+</code></pre></div></div> <p>The output is as follows:</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>[parent] getpid() = 387665
+[parent] getppid() = 387664
+[parent] Created child process with PID: 387666
+[child] getpid() = 1
+[child] getppid() = 0
+</code></pre></div></div> <blockquote> <p><code class="language-plaintext highlighter-rouge">getppid()</code> gets the PID of the parent.</p> </blockquote> <p>First, we need to know what <code class="language-plaintext highlighter-rouge">getpid()</code> does. Internally, <code class="language-plaintext highlighter-rouge">getpid()</code> calls <code class="language-plaintext highlighter-rouge">task_tgid_vnr()</code> which is a kernel helper that returns a task’s process ID (TGID). <code class="language-plaintext highlighter-rouge">task_tgid_vnr()</code> calls <code class="language-plaintext highlighter-rouge">__task_pid_nr_ns()</code>. For more details see <a href="https://elixir.bootlin.com/linux/v6.18.3/source/kernel/pid.c#L510">here</a>.</p> <blockquote> <p>TGID is what the userspace calls the process ID</p> </blockquote> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">static</span> <span class="kr">inline</span> <span class="n">pid_t</span> <span class="nf">task_tgid_vnr</span><span class="p">(</span><span class="k">struct</span> <span class="n">task_struct</span> <span class="o">*</span><span class="n">tsk</span><span class="p">)</span>
+<span class="p">{</span>
+	<span class="k">return</span> <span class="n">__task_pid_nr_ns</span><span class="p">(</span><span class="n">tsk</span><span class="p">,</span> <span class="n">PIDTYPE_TGID</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">pid_t</span> <span class="nf">__task_pid_nr_ns</span><span class="p">(</span><span class="k">struct</span> <span class="n">task_struct</span> <span class="o">*</span><span class="n">task</span><span class="p">,</span> <span class="k">enum</span> <span class="n">pid_type</span> <span class="n">type</span><span class="p">,</span>
+			<span class="k">struct</span> <span class="n">pid_namespace</span> <span class="o">*</span><span class="n">ns</span><span class="p">)</span>
+<span class="p">{</span>
+	<span class="n">pid_t</span> <span class="n">nr</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
 
-   HoganJsUtils.prototype._readFromCache = function(templateKey) {
--    return hoganTemplates[templateKey];
-+    return extraTemplates[templateKey] || hoganTemplates[templateKey];
-   };
+	<span class="n">rcu_read_lock</span><span class="p">();</span>
+	<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">ns</span><span class="p">)</span>
+		<span class="n">ns</span> <span class="o">=</span> <span class="n">task_active_pid_ns</span><span class="p">(</span><span class="n">current</span><span class="p">);</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">ns</span><span class="p">)</span>
+		<span class="n">nr</span> <span class="o">=</span> <span class="n">pid_nr_ns</span><span class="p">(</span><span class="n">rcu_dereference</span><span class="p">(</span><span class="o">*</span><span class="n">task_pid_ptr</span><span class="p">(</span><span class="n">task</span><span class="p">,</span> <span class="n">type</span><span class="p">)),</span> <span class="n">ns</span><span class="p">);</span>
+	<span class="n">rcu_read_unlock</span><span class="p">();</span>
 
-   HoganJsUtils.prototype._templateKey = function(namespace, view) {
-     return namespace + '-' + view;
-   };
+	<span class="k">return</span> <span class="n">nr</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div> <p>Since <code class="language-plaintext highlighter-rouge">pid_namespace</code> is <code class="language-plaintext highlighter-rouge">NULL</code>, it uses the current PID namespace. Then it calls <code class="language-plaintext highlighter-rouge">pid_nr_ns</code>.</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">pid_t</span> <span class="nf">pid_nr_ns</span><span class="p">(</span><span class="k">struct</span> <span class="n">pid</span> <span class="o">*</span><span class="n">pid</span><span class="p">,</span> <span class="k">struct</span> <span class="n">pid_namespace</span> <span class="o">*</span><span class="n">ns</span><span class="p">)</span>
+<span class="p">{</span>
+	<span class="k">struct</span> <span class="n">upid</span> <span class="o">*</span><span class="n">upid</span><span class="p">;</span>
+	<span class="n">pid_t</span> <span class="n">nr</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
 
--  module.exports.HoganJsUtils = new HoganJsUtils();
-+  HoganJsUtils.prototype.compile = function(templateStr) {
-+    return hogan.compile(templateStr);
-+  };
-+
-+  module.exports.HoganJsUtils = HoganJsUtils;
- })();
-diff --git a/src/html-printer.js b/src/html-printer.js
-index 585d5b66..13f83047 100644
---- a/src/html-printer.js
-+++ b/src/html-printer.js
-@@ -8,6 +8,7 @@
- (function() {
-   var LineByLinePrinter = require('./line-by-line-printer.js').LineByLinePrinter;
-   var SideBySidePrinter = require('./side-by-side-printer.js').SideBySidePrinter;
-+  var FileListPrinter = require('./file-list-printer.js').FileListPrinter;
-
-   function HtmlPrinter() {
-   }
-@@ -22,5 +23,10 @@
-     return sideBySidePrinter.generateSideBySideJsonHtml(diffFiles);
-   };
-
-+  HtmlPrinter.prototype.generateFileListSummary = function(diffJson, config) {
-+    var fileListPrinter = new FileListPrinter(config);
-+    return fileListPrinter.generateFileList(diffJson);
-+  };
-+
-   module.exports.HtmlPrinter = new HtmlPrinter();
- })();
-diff --git a/src/line-by-line-printer.js b/src/line-by-line-printer.js
-index b07eb53c..d230bedd 100644
---- a/src/line-by-line-printer.js
-+++ b/src/line-by-line-printer.js
-@@ -11,7 +11,8 @@
-   var utils = require('./utils.js').Utils;
-   var Rematch = require('./rematch.js').Rematch;
-
--  var hoganUtils = require('./hoganjs-utils.js').HoganJsUtils;
-+  var hoganUtils;
-+
-   var genericTemplatesPath = 'generic';
-   var baseTemplatesPath = 'line-by-line';
-   var iconsBaseTemplatesPath = 'icon';
-@@ -19,6 +20,9 @@
-
-   function LineByLinePrinter(config) {
-     this.config = config;
-+
-+    var HoganJsUtils = require('./hoganjs-utils.js').HoganJsUtils;
-+    hoganUtils = new HoganJsUtils(config);
-   }
-
-   LineByLinePrinter.prototype.makeFileDiffHtml = function(file, diffs) {
-diff --git a/src/side-by-side-printer.js b/src/side-by-side-printer.js
-index bbf1dc8d..5e3033b3 100644
---- a/src/side-by-side-printer.js
-+++ b/src/side-by-side-printer.js
-@@ -11,7 +11,8 @@
-   var utils = require('./utils.js').Utils;
-   var Rematch = require('./rematch.js').Rematch;
-
--  var hoganUtils = require('./hoganjs-utils.js').HoganJsUtils;
-+  var hoganUtils;
-+
-   var genericTemplatesPath = 'generic';
-   var baseTemplatesPath = 'side-by-side';
-   var iconsBaseTemplatesPath = 'icon';
-@@ -26,6 +27,9 @@
-
-   function SideBySidePrinter(config) {
-     this.config = config;
-+
-+    var HoganJsUtils = require('./hoganjs-utils.js').HoganJsUtils;
-+    hoganUtils = new HoganJsUtils(config);
-   }
-
-   SideBySidePrinter.prototype.makeDiffHtml = function(file, diffs) {
-diff --git a/test/file-list-printer-tests.js b/test/file-list-printer-tests.js
-index a502a46f..60ea3208 100644
---- a/test/file-list-printer-tests.js
-+++ b/test/file-list-printer-tests.js
-@@ -1,6 +1,6 @@
- var assert = require('assert');
-
--var fileListPrinter = require('../src/file-list-printer.js').FileListPrinter;
-+var fileListPrinter = new (require('../src/file-list-printer.js').FileListPrinter)();
-
- describe('FileListPrinter', function() {
-   describe('generateFileList', function() {
-diff --git a/test/hogan-cache-tests.js b/test/hogan-cache-tests.js
-index 190bf6f8..3bb754ac 100644
---- a/test/hogan-cache-tests.js
-+++ b/test/hogan-cache-tests.js
-@@ -1,6 +1,6 @@
- var assert = require('assert');
-
--var HoganJsUtils = require('../src/hoganjs-utils.js').HoganJsUtils;
-+var HoganJsUtils = new (require('../src/hoganjs-utils.js').HoganJsUtils)();
- var diffParser = require('../src/diff-parser.js').DiffParser;
-
- describe('HoganJsUtils', function() {
-@@ -21,16 +21,28 @@ describe('HoganJsUtils', function() {
-       });
-       assert.equal(emptyDiffHtml, result);
-     });
-+
-     it('should render view without cache', function() {
-       var result = HoganJsUtils.render('generic', 'empty-diff', {
-         contentClass: 'd2h-code-line',
-         diffParser: diffParser
-       }, {noCache: true});
--      assert.equal(emptyDiffHtml + '\n', result);
-+      assert.equal(emptyDiffHtml, result);
-     });
-+
-     it('should return null if template is missing', function() {
--      var result = HoganJsUtils.render('generic', 'missing-template', {}, {noCache: true});
-+      var hoganUtils = new (require('../src/hoganjs-utils.js').HoganJsUtils)({noCache: true});
-+      var result = hoganUtils.render('generic', 'missing-template', {});
-       assert.equal(null, result);
-     });
-+
-+    it('should allow templates to be overridden', function() {
-+      var emptyDiffTemplate = HoganJsUtils.compile('&lt;p&gt;&lt;/p&gt;');
-+
-+      var config = {templates: {'generic-empty-diff': emptyDiffTemplate}};
-+      var hoganUtils = new (require('../src/hoganjs-utils.js').HoganJsUtils)(config);
-+      var result = hoganUtils.render('generic', 'empty-diff', {myName: 'Rodrigo Fernandes'});
-+      assert.equal('&lt;p&gt;Rodrigo Fernandes&lt;/p&gt;', result);
-+    });
-   });
- });
-diff --git a/test/line-by-line-tests.js b/test/line-by-line-tests.js
-index 1cd92073..8869b3df 100644
---- a/test/line-by-line-tests.js
-+++ b/test/line-by-line-tests.js
-@@ -14,7 +14,7 @@ describe('LineByLinePrinter', function() {
-         '            File without changes\n' +
-         '        &lt;/div&gt;\n' +
-         '    &lt;/td&gt;\n' +
--        '&lt;/tr&gt;\n';
-+        '&lt;/tr&gt;';
-
-       assert.equal(expected, fileHtml);
-     });
-@@ -422,7 +422,6 @@ describe('LineByLinePrinter', function() {
-         '        &lt;/div&gt;\n' +
-         '    &lt;/td&gt;\n' +
-         '&lt;/tr&gt;\n' +
--        '\n' +
-         '                &lt;/tbody&gt;\n' +
-         '            &lt;/table&gt;\n' +
-         '        &lt;/div&gt;\n' +
-diff --git a/test/side-by-side-printer-tests.js b/test/side-by-side-printer-tests.js
-index 76625f8e..771daaa5 100644
---- a/test/side-by-side-printer-tests.js
-+++ b/test/side-by-side-printer-tests.js
-@@ -14,7 +14,7 @@ describe('SideBySidePrinter', function() {
-         '            File without changes\n' +
-         '        &lt;/div&gt;\n' +
-         '    &lt;/td&gt;\n' +
--        '&lt;/tr&gt;\n';
-+        '&lt;/tr&gt;';
-
-       assert.equal(expectedRight, fileHtml.right);
-       assert.equal(expectedLeft, fileHtml.left);
-@@ -324,7 +324,6 @@ describe('SideBySidePrinter', function() {
-         '        &lt;/div&gt;\n' +
-         '    &lt;/td&gt;\n' +
-         '&lt;/tr&gt;\n' +
--        '\n' +
-         '                    &lt;/tbody&gt;\n' +
-         '                &lt;/table&gt;\n' +
-         '            &lt;/div&gt;\n' +
-
-From f3cadb96677d0eb82fc2752dc3ffbf35ca9b5bdb Mon Sep 17 00:00:00 2001
-From: Rodrigo Fernandes &lt;rtfrodrigo@gmail.com&gt;
-Date: Sat, 15 Oct 2016 13:21:22 +0100
-Subject: [PATCH 2/2] Allow uncompiled templates
-
----
- README.md                 |  3 +++
- src/hoganjs-utils.js      |  7 +++++++
- test/hogan-cache-tests.js | 24 +++++++++++++++++++++++-
- 3 files changed, 33 insertions(+), 1 deletion(-)
-
-diff --git a/README.md b/README.md
-index 132c8a28..46909f25 100644
---- a/README.md
-+++ b/README.md
-@@ -98,6 +98,9 @@ The HTML output accepts a Javascript object with configuration. Possible options
-   - `synchronisedScroll`: scroll both panes in side-by-side mode: `true` or `false`, default is `false`
-   - `matchWordsThreshold`: similarity threshold for word matching, default is 0.25
-   - `matchingMaxComparisons`: perform at most this much comparisons for line matching a block of changes, default is `2500`
-+  - `templates`: object with previously compiled templates to replace parts of the html
-+  - `rawTemplates`: object with raw not compiled templates to replace parts of the html
-+  &gt; For more information regarding the possible templates look into [src/templates](https://github.com/rtfpessoa/diff2html/tree/master/src/templates)
-
- ## Diff2HtmlUI Helper
-
-diff --git a/src/hoganjs-utils.js b/src/hoganjs-utils.js
-index 0dda08d7..b2e9c275 100644
---- a/src/hoganjs-utils.js
-+++ b/src/hoganjs-utils.js
-@@ -17,6 +17,13 @@
-   function HoganJsUtils(configuration) {
-     this.config = configuration || {};
-     extraTemplates = this.config.templates || {};
-+
-+    var rawTemplates = this.config.rawTemplates || {};
-+    for (var templateName in rawTemplates) {
-+      if (rawTemplates.hasOwnProperty(templateName)) {
-+        if (!extraTemplates[templateName]) extraTemplates[templateName] = this.compile(rawTemplates[templateName]);
-+      }
-+    }
-   }
-
-   HoganJsUtils.prototype.render = function(namespace, view, params) {
-diff --git a/test/hogan-cache-tests.js b/test/hogan-cache-tests.js
-index 3bb754ac..a34839c0 100644
---- a/test/hogan-cache-tests.js
-+++ b/test/hogan-cache-tests.js
-@@ -36,7 +36,7 @@ describe('HoganJsUtils', function() {
-       assert.equal(null, result);
-     });
-
--    it('should allow templates to be overridden', function() {
-+    it('should allow templates to be overridden with compiled templates', function() {
-       var emptyDiffTemplate = HoganJsUtils.compile('&lt;p&gt;&lt;/p&gt;');
-
-       var config = {templates: {'generic-empty-diff': emptyDiffTemplate}};
-@@ -44,5 +44,27 @@ describe('HoganJsUtils', function() {
-       var result = hoganUtils.render('generic', 'empty-diff', {myName: 'Rodrigo Fernandes'});
-       assert.equal('&lt;p&gt;Rodrigo Fernandes&lt;/p&gt;', result);
-     });
-+
-+    it('should allow templates to be overridden with uncompiled templates', function() {
-+      var emptyDiffTemplate = '&lt;p&gt;&lt;/p&gt;';
-+
-+      var config = {rawTemplates: {'generic-empty-diff': emptyDiffTemplate}};
-+      var hoganUtils = new (require('../src/hoganjs-utils.js').HoganJsUtils)(config);
-+      var result = hoganUtils.render('generic', 'empty-diff', {myName: 'Rodrigo Fernandes'});
-+      assert.equal('&lt;p&gt;Rodrigo Fernandes&lt;/p&gt;', result);
-+    });
-+
-+    it('should allow templates to be overridden giving priority to compiled templates', function() {
-+      var emptyDiffTemplate = HoganJsUtils.compile('&lt;p&gt;&lt;/p&gt;');
-+      var emptyDiffTemplateUncompiled = '&lt;p&gt;Not used!&lt;/p&gt;';
-+
-+      var config = {
-+        templates: {'generic-empty-diff': emptyDiffTemplate},
-+        rawTemplates: {'generic-empty-diff': emptyDiffTemplateUncompiled}
-+      };
-+      var hoganUtils = new (require('../src/hoganjs-utils.js').HoganJsUtils)(config);
-+      var result = hoganUtils.render('generic', 'empty-diff', {myName: 'Rodrigo Fernandes'});
-+      assert.equal('&lt;p&gt;Rodrigo Fernandes&lt;/p&gt;', result);
-+    });
-   });
- });
-</code></pre>]]></content><author><name></name></author><category term="sample-posts"/><category term="formatting"/><category term="code"/><summary type="html"><![CDATA[this is how you can display code diffs]]></summary></entry><entry><title type="html">a post with advanced image components</title><link href="https://alshedivat.github.io/al-folio/blog/2024/advanced-images/" rel="alternate" type="text/html" title="a post with advanced image components"/><published>2024-01-27T11:46:00+00:00</published><updated>2024-01-27T11:46:00+00:00</updated><id>https://alshedivat.github.io/al-folio/blog/2024/advanced-images</id><content type="html" xml:base="https://alshedivat.github.io/al-folio/blog/2024/advanced-images/"><![CDATA[<p>This is an example post with advanced image components.</p> <h2 id="image-slider">Image Slider</h2> <p>This is a simple image slider. It uses the <a href="https://swiperjs.com/">Swiper</a> library. Check the <a href="https://swiperjs.com/demos">examples page</a> for more information of what you can achieve with it.</p> <swiper-container keyboard="true" navigation="true" pagination="true" pagination-clickable="true" pagination-dynamic-bullets="true" rewind="true"> <swiper-slide> <figure> <picture> <source class="responsive-img-srcset" srcset="/al-folio/assets/img/9-480.webp 480w,/al-folio/assets/img/9-800.webp 800w,/al-folio/assets/img/9-1400.webp 1400w," type="image/webp" sizes="95vw"/> <img src="/al-folio/assets/img/9.jpg" class="img-fluid rounded z-depth-1" width="100%" height="auto" loading="eager" onerror="this.onerror=null; document.querySelectorAll('.responsive-img-srcset').forEach(function (n) { n.remove(); });"/> </picture> </figure> </swiper-slide> <swiper-slide> <figure> <picture> <source class="responsive-img-srcset" srcset="/al-folio/assets/img/7-480.webp 480w,/al-folio/assets/img/7-800.webp 800w,/al-folio/assets/img/7-1400.webp 1400w," type="image/webp" sizes="95vw"/> <img src="/al-folio/assets/img/7.jpg" class="img-fluid rounded z-depth-1" width="100%" height="auto" loading="eager" onerror="this.onerror=null; document.querySelectorAll('.responsive-img-srcset').forEach(function (n) { n.remove(); });"/> </picture> </figure> </swiper-slide> <swiper-slide> <figure> <picture> <source class="responsive-img-srcset" srcset="/al-folio/assets/img/8-480.webp 480w,/al-folio/assets/img/8-800.webp 800w,/al-folio/assets/img/8-1400.webp 1400w," type="image/webp" sizes="95vw"/> <img src="/al-folio/assets/img/8.jpg" class="img-fluid rounded z-depth-1" width="100%" height="auto" loading="eager" onerror="this.onerror=null; document.querySelectorAll('.responsive-img-srcset').forEach(function (n) { n.remove(); });"/> </picture> </figure> </swiper-slide> <swiper-slide> <figure> <picture> <source class="responsive-img-srcset" srcset="/al-folio/assets/img/10-480.webp 480w,/al-folio/assets/img/10-800.webp 800w,/al-folio/assets/img/10-1400.webp 1400w," type="image/webp" sizes="95vw"/> <img src="/al-folio/assets/img/10.jpg" class="img-fluid rounded z-depth-1" width="100%" height="auto" loading="eager" onerror="this.onerror=null; document.querySelectorAll('.responsive-img-srcset').forEach(function (n) { n.remove(); });"/> </picture> </figure> </swiper-slide> <swiper-slide> <figure> <picture> <source class="responsive-img-srcset" srcset="/al-folio/assets/img/12-480.webp 480w,/al-folio/assets/img/12-800.webp 800w,/al-folio/assets/img/12-1400.webp 1400w," type="image/webp" sizes="95vw"/> <img src="/al-folio/assets/img/12.jpg" class="img-fluid rounded z-depth-1" width="100%" height="auto" loading="eager" onerror="this.onerror=null; document.querySelectorAll('.responsive-img-srcset').forEach(function (n) { n.remove(); });"/> </picture> </figure> </swiper-slide> </swiper-container> <h2 id="image-comparison-slider">Image Comparison Slider</h2> <p>This is a simple image comparison slider. It uses the <a href="https://img-comparison-slider.sneas.io/">img-comparison-slider</a> library. Check the <a href="https://img-comparison-slider.sneas.io/examples.html">examples page</a> for more information of what you can achieve with it.</p> <img-comparison-slider> <figure slot="first"> <picture> <source class="responsive-img-srcset" srcset="/al-folio/assets/img/prof_pic-480.webp 480w,/al-folio/assets/img/prof_pic-800.webp 800w,/al-folio/assets/img/prof_pic-1400.webp 1400w," type="image/webp" sizes="95vw"/> <img src="/al-folio/assets/img/prof_pic.jpg" class="img-fluid rounded z-depth-1" width="100%" height="auto" loading="lazy" onerror="this.onerror=null; document.querySelectorAll('.responsive-img-srcset').forEach(function (n) { n.remove(); });"/> </picture> </figure> <figure slot="second"> <picture> <source class="responsive-img-srcset" srcset="/al-folio/assets/img/prof_pic_color-480.webp 480w,/al-folio/assets/img/prof_pic_color-800.webp 800w,/al-folio/assets/img/prof_pic_color-1400.webp 1400w," type="image/webp" sizes="95vw"/> <img src="/al-folio/assets/img/prof_pic_color.png" class="img-fluid rounded z-depth-1" width="100%" height="auto" loading="lazy" onerror="this.onerror=null; document.querySelectorAll('.responsive-img-srcset').forEach(function (n) { n.remove(); });"/> </picture> </figure> </img-comparison-slider>]]></content><author><name></name></author><category term="sample-posts"/><category term="formatting"/><category term="images"/><summary type="html"><![CDATA[this is what advanced image components could look like]]></summary></entry></feed>
+	<span class="k">if</span> <span class="p">(</span><span class="n">pid</span> <span class="o">&amp;&amp;</span> <span class="n">ns</span> <span class="o">&amp;&amp;</span> <span class="n">ns</span><span class="o">-&gt;</span><span class="n">level</span> <span class="o">&lt;=</span> <span class="n">pid</span><span class="o">-&gt;</span><span class="n">level</span><span class="p">)</span> <span class="p">{</span>
+		<span class="n">upid</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">pid</span><span class="o">-&gt;</span><span class="n">numbers</span><span class="p">[</span><span class="n">ns</span><span class="o">-&gt;</span><span class="n">level</span><span class="p">];</span>
+		<span class="k">if</span> <span class="p">(</span><span class="n">upid</span><span class="o">-&gt;</span><span class="n">ns</span> <span class="o">==</span> <span class="n">ns</span><span class="p">)</span>
+			<span class="n">nr</span> <span class="o">=</span> <span class="n">upid</span><span class="o">-&gt;</span><span class="n">nr</span><span class="p">;</span>
+	<span class="p">}</span>
+	<span class="k">return</span> <span class="n">nr</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div> <p>PID numbers are stored in the task’s <code class="language-plaintext highlighter-rouge">struct pid</code>.</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">pid</span> <span class="p">{</span>
+	<span class="n">refcount_t</span> <span class="n">count</span><span class="p">;</span>
+	<span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">level</span><span class="p">;</span>
+	<span class="n">spinlock_t</span> <span class="n">lock</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="p">{</span>
+		<span class="n">u64</span> <span class="n">ino</span><span class="p">;</span>
+		<span class="k">struct</span> <span class="n">rb_node</span> <span class="n">pidfs_node</span><span class="p">;</span>
+		<span class="k">struct</span> <span class="n">dentry</span> <span class="o">*</span><span class="n">stashed</span><span class="p">;</span>
+		<span class="k">struct</span> <span class="n">pidfs_attr</span> <span class="o">*</span><span class="n">attr</span><span class="p">;</span>
+	<span class="p">};</span>
+	<span class="cm">/* lists of tasks that use this pid */</span>
+	<span class="k">struct</span> <span class="n">hlist_head</span> <span class="n">tasks</span><span class="p">[</span><span class="n">PIDTYPE_MAX</span><span class="p">];</span>
+	<span class="k">struct</span> <span class="n">hlist_head</span> <span class="n">inodes</span><span class="p">;</span>
+	<span class="cm">/* wait queue for pidfd notifications */</span>
+	<span class="n">wait_queue_head_t</span> <span class="n">wait_pidfd</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">rcu_head</span> <span class="n">rcu</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">upid</span> <span class="n">numbers</span><span class="p">[];</span>
+<span class="p">};</span>
+</code></pre></div></div> <p><code class="language-plaintext highlighter-rouge">numbers[]</code> store the PID as seen in different namespaces. PID namespace is hierarchical, it is stored in a flat array of <code class="language-plaintext highlighter-rouge">struct upid</code> where <code class="language-plaintext highlighter-rouge">numbers[level]</code> holds the PID of the process as seen in the namespace of depth <code class="language-plaintext highlighter-rouge">level</code>. So a task that lives in a deep namespace has multiple valid PIDs - one per ancestor namespace.</p> <p>For example, assume the hierarchy looks like this:</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>init_pid_ns
+  └── container_pid_ns
+        └── nested_pid_ns
+</code></pre></div></div> <p>The array will be structured like this:</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pid-&gt;numbers[0] → host PID
+pid-&gt;numbers[1] → container PID
+pid-&gt;numbers[2] → nested PID
+</code></pre></div></div> <p>Basically, <code class="language-plaintext highlighter-rouge">pid_nr_ns</code> retrieves the PID of the task associated to the current namespace. A long explanation for a simple conclusion.</p> <h2 id="conclusion">Conclusion</h2> <p>The kernel is namespace-aware. When a function is called to read some namespaced resource (e.g. PIDs, mounts, network interfaces), the kernel determines the active namespace of the caller task and uses the namespace object to view resources. Each namespace maintains its own state, thus just by following pointers, the kernel is able to return different results depending on the caller’s namespace context.</p> <p>This is my first time doing a deep dive on kernel code. If there are anything that needs clarification or fixing, please do <a href="mailto:joshjms1607@gmail.com">email</a> me. Many thanks for reading this far!</p>]]></content><author><name></name></author><category term="linux"/><summary type="html"><![CDATA[A deep dive into how Linux namespaces actually work inside the Linux kernel.]]></summary></entry></feed>

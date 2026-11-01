@@ -1,0 +1,504 @@
+<!DOCTYPE html> <html lang="en"> <head> <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"> <meta charset="utf-8"> <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"> <meta http-equiv="X-UA-Compatible" content="IE=edge"> <title> Linux Namespaces From Inside the Kernel | joshjms </title> <meta name="author" content="Joshua James"> <meta name="description" content="A deep dive into how Linux namespaces actually work inside the Linux kernel."> <meta name="keywords" content="nerd"> <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data: https:; media-src 'self' https:; frame-src 'self' https:; connect-src 'self' https:;"> <style>
+  :root {
+    --max-content-width: 930px;
+  }
+</style> <link rel="stylesheet" href="/assets/css/tailwind.css?v=50c64c15cbb9fd1ce6056fdb8bcb4b62"> <link defer rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.2.0/css/all.min.css" integrity="sha256-MVopmdyC2tYTiJ8wlktf0uh0v4NgT+vNdyVFepi7Q0c=" crossorigin="anonymous"> <link defer rel="stylesheet" href="https://cdn.jsdelivr.net/npm/academicons@1.9.5/css/academicons.min.css" integrity="sha256-SzrCOBJbGVFMahewkgjwnApaV2+av1DwMAA+/QGLyZw=" crossorigin="anonymous"> <link defer rel="stylesheet" href="https://cdn.jsdelivr.net/npm/scholar-icons@1.0.3/css/scholar-icons.css" integrity="sha256-VY3hHVj/hNX3fYG6wtbA6TcKJQl7+FthzGSyIB64klY=" crossorigin="anonymous"> <link defer rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Roboto+Slab:100,300,400,500,700|Material+Icons&amp;display=swap"> <link defer rel="stylesheet" href="/assets/css/jekyll-pygments-themes-github.css?v=591dab5a4e56573bf4ef7fd332894c99" media="" id="highlight_theme_light"> <link rel="shortcut icon" href="data:image/svg+xml,&lt;svg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20100%20100%22&gt;&lt;text%20y=%22.9em%22%20font-size=%2290%22&gt;%F0%9F%A5%B2&lt;/text&gt;&lt;/svg&gt;"> <link rel="stylesheet" href="/assets/css/main.css?v=3116ba77db9ee1581d05bb3e86fbf7f1"> <link rel="canonical" href="https://joshjms.com/blog/2026/linux-namespaces-from-inside-the-kernel/"> <script src="/assets/js/theme.js?v=5286c3e4c334d0ecb8fc0c40ff4fa7ec"></script> <link defer rel="stylesheet" href="/assets/css/jekyll-pygments-themes-native.css?v=5847e5ed4a4568527aa6cfab446049ca" media="none" id="highlight_theme_dark"> <script>
+    initTheme();
+  </script> </head> <body class="fixed-top-nav "> <header> <nav id="navbar" class="navbar navbar-light navbar-expand-sm fixed-top" role="navigation"> <div class="container"> <a class="navbar-brand title font-weight-lighter" href="/"> joshjms </a> <button class="navbar-toggler collapsed navbar-toggler-main" type="button" data-nav-toggle="navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation"> <span class="sr-only">Toggle navigation</span> <span class="icon-bar top-bar"></span> <span class="icon-bar middle-bar"></span> <span class="icon-bar bottom-bar"></span> </button> <div class="collapse navbar-collapse navbar-collapse-main" id="navbarNav"> <ul class="navbar-nav navbar-menu-list flex-nowrap"> <li class="nav-item "> <a class="nav-link" href="/">about </a> </li> <li class="nav-item active"> <a class="nav-link" href="/blog/">blog </a> </li> <li class="nav-item "> <a class="nav-link" href="/repositories/">repositories </a> </li> <li class="nav-item "> <a class="nav-link" href="/cv/">CV </a> </li> <li class="nav-item"> <button id="search-toggle" type="button" title="Search" aria-label="Open search"> <span class="nav-link">ctrl k <i class="fa-solid fa-magnifying-glass"></i></span> </button> </li> <li class="toggle-container"> <button id="light-toggle" type="button" title="Change theme" aria-label="Change color theme"> <i class="fa-half-sun-moon" id="light-toggle-system"></i> <i class="fa-solid fa-moon" id="light-toggle-dark"></i> <i class="fa-solid fa-sun" id="light-toggle-light"></i> </button> </li> </ul> </div> </div> </nav> <progress id="progress" value="0"> <div class="progress-container"> <span class="progress-bar"></span> </div> </progress> </header> <div class="container mt-5" role="main"> <div class="post"> <header class="post-header"> <h1 class="post-title">Linux Namespaces From Inside the Kernel</h1> <p class="post-meta"> Created on January 06, 2026 </p> <p class="post-tags"> <a href="/blog/2026"> <i class="fa-solid fa-calendar fa-sm"></i> 2026 </a>   ·   <a href="/blog/tag/linux"> <i class="fa-solid fa-hashtag fa-sm"></i> linux</a> </p> </header> <article class="post-content"> <div id="markdown-content"> <p>Happy New Year!</p> <p>This has been in my books for a while. As much as I want to write regularly, I do not have enough cores in my brain to write fast - and whoever designed the scheduling algorithm in my brain (me) really sucks because it keeps context-switching (I keep getting distracted).</p> <p>Last November, I had the opportunity of a lifetime to speak in Google Devfest Singapore. I spoke about how containers work under the hood. I introduced the requirements of an online judge and why container-like sandboxes are needed. Then how to use Linux primitives to create a minimal container.</p> <div class="row mt-3"> <div class="col-sm mt-3 mt-md-0"> <figure> <picture> <source class="responsive-img-srcset" srcset="/assets/img/linux-namespaces-devfest-480.webp 480w,/assets/img/linux-namespaces-devfest-800.webp 800w,/assets/img/linux-namespaces-devfest-1400.webp 1400w," type="image/webp" sizes="95vw"></source> <img src="/assets/img/linux-namespaces-devfest.jpg" class="img-fluid rounded z-depth-1" width="100%" height="auto" alt="Google Devfest Singapore 2025" loading="lazy" onerror="this.onerror=null; document.querySelectorAll('.responsive-img-srcset').forEach(function (n) { n.remove(); });"> </picture> </figure> </div> <div class="col-sm mt-3 mt-md-0"> <figure> <picture> <source class="responsive-img-srcset" srcset="/assets/img/linux-namespaces-devfest-01-480.webp 480w,/assets/img/linux-namespaces-devfest-01-800.webp 800w,/assets/img/linux-namespaces-devfest-01-1400.webp 1400w," type="image/webp" sizes="95vw"></source> <img src="/assets/img/linux-namespaces-devfest-01.jpg" class="img-fluid rounded z-depth-1" width="100%" height="auto" alt="Google Devfest Singapore 2025" loading="lazy" onerror="this.onerror=null; document.querySelectorAll('.responsive-img-srcset').forEach(function (n) { n.remove(); });"> </picture> </figure> </div> </div> <p>Well, in that talk, I explained about <a href="https://man7.org/linux/man-pages/man7/namespaces.7.html" rel="external nofollow noopener" target="_blank"><strong>namespaces</strong></a> which are a Linux kernel feature that limits what a process can see. This includes <a href="https://man7.org/linux/man-pages/man7/mount_namespaces.7.html" rel="external nofollow noopener" target="_blank">mounts</a>, <a href="https://man7.org/linux/man-pages/man7/user_namespaces.7.html" rel="external nofollow noopener" target="_blank">users</a>, and even <a href="https://man7.org/linux/man-pages/man7/pid_namespaces.7.html" rel="external nofollow noopener" target="_blank">other processes</a>. Then, I became curious about how the kernel is able to isolate the views of different resources among different namespaces. Therefore, the motivation for this blog.</p> <h2 id="namespaces">Namespaces</h2> <p>Namespaces are a feature of the Linux kernel that control the resources that are (or can be) seen by processes. This means that processes in a namespace sees resources differently compared to processes in a different namespace.</p> <p>As of kernel version 5.6, there are 8 namespace types:</p> <ul> <li>Mount</li> <li>PID</li> <li>Network</li> <li>IPC</li> <li>UTS</li> <li>User</li> <li>Control group</li> <li>Time</li> </ul> <p>Each process belongs to a namespace and can only see resources that are associated with that namespace, for example, a process in a PID namespace can only see processes inside that namespace.</p> <p>It goes without saying, namespaces are crucial for the modern containers we all know and love.</p> <p>We can create namespaces using the <code class="language-plaintext highlighter-rouge">unshare</code> or <code class="language-plaintext highlighter-rouge">clone</code> system calls. We will talk more about these later on in this blog.</p> <h2 id="a-process-from-the-kernels-perspective">A Process from the Kernel’s Perspective</h2> <p>To understand how namespaces appear from the kernel’s perspective, we should first take a look at how a process is represented. We can find this by reading the <a href="https://elixir.bootlin.com/linux/v6.18.3/source/kernel" rel="external nofollow noopener" target="_blank">kernel code</a> (latest version used as of writing is v6.18.3).</p> <p>It’s a long struct, exactly 850 lines, but you can take a look at it <a href="https://elixir.bootlin.com/linux/v6.18.3/source/include/linux/sched.h#L819" rel="external nofollow noopener" target="_blank">here</a>.</p> <p>Turns out there’s an interesting field:</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">task_struct</span>
+<span class="p">{</span>
+    <span class="p">...</span>
+	<span class="cm">/* Namespaces: */</span>
+	<span class="k">struct</span> <span class="n">nsproxy</span> <span class="o">*</span><span class="n">nsproxy</span><span class="p">;</span>
+    <span class="p">...</span>
+<span class="p">}</span> <span class="n">__attribute__</span><span class="p">((</span><span class="n">aligned</span><span class="p">(</span><span class="mi">64</span><span class="p">)));</span>
+</code></pre></div></div> <blockquote> <p>The kernel doesn’t actually bother with the concept of processes. It treats both processes and threads as tasks.</p> </blockquote> <p>Each task has a pointer to a <code class="language-plaintext highlighter-rouge">struct nsproxy</code>.</p> <h2 id="a-process-nsproxy">A Process’ <code class="language-plaintext highlighter-rouge">nsproxy</code> </h2> <p>The implementation for <code class="language-plaintext highlighter-rouge">struct nsproxy</code> can be found <a href="https://elixir.bootlin.com/linux/v6.18.3/source/include/linux/nsproxy.h#L32" rel="external nofollow noopener" target="_blank">here</a>.</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/*
+ * A structure to contain pointers to all per-process
+ * namespaces - fs (mount), uts, network, sysvipc, etc.
+ *
+ * The pid namespace is an exception -- it's accessed using
+ * task_active_pid_ns.  The pid namespace here is the
+ * namespace that children will use.
+ *
+ * 'count' is the number of tasks holding a reference.
+ * The count for each namespace, then, will be the number
+ * of nsproxies pointing to it, not the number of tasks.
+ *
+ * The nsproxy is shared by tasks which share all namespaces.
+ * As soon as a single namespace is cloned or unshared, the
+ * nsproxy is copied.
+ */</span>
+<span class="k">struct</span> <span class="n">nsproxy</span> <span class="p">{</span>
+	<span class="n">refcount_t</span> <span class="n">count</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">uts_namespace</span> <span class="o">*</span><span class="n">uts_ns</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">ipc_namespace</span> <span class="o">*</span><span class="n">ipc_ns</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">mnt_namespace</span> <span class="o">*</span><span class="n">mnt_ns</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">pid_namespace</span> <span class="o">*</span><span class="n">pid_ns_for_children</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">net</span> 	     <span class="o">*</span><span class="n">net_ns</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">time_namespace</span> <span class="o">*</span><span class="n">time_ns</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">time_namespace</span> <span class="o">*</span><span class="n">time_ns_for_children</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">cgroup_namespace</span> <span class="o">*</span><span class="n">cgroup_ns</span><span class="p">;</span>
+<span class="p">};</span>
+</code></pre></div></div> <p><code class="language-plaintext highlighter-rouge">struct nsproxy</code> has a pointer to all the respective namespace structs. Since each <code class="language-plaintext highlighter-rouge">task_struct</code> holds a pointer to an <code class="language-plaintext highlighter-rouge">nsproxy</code>, every task is associated to a specific set of namespaces.</p> <p>We’ll see operations involving <code class="language-plaintext highlighter-rouge">nsproxy</code> <a href="https://elixir.bootlin.com/linux/v6.18.3/source/kernel/nsproxy.c" rel="external nofollow noopener" target="_blank">here</a>.</p> <p>Tasks can share the same <code class="language-plaintext highlighter-rouge">nsproxy</code>. Linux uses a copy-on-write for namespace membership. When you <code class="language-plaintext highlighter-rouge">unshare</code> or <code class="language-plaintext highlighter-rouge">clone</code>, the kernel copies the <code class="language-plaintext highlighter-rouge">nsproxy</code> of the parent task and changes only the requested parts.</p> <p>The initial process (PID 1) has a statically defined <code class="language-plaintext highlighter-rouge">nsproxy</code> (<code class="language-plaintext highlighter-rouge">init_nsproxy</code>) which represents the root namespace set. All other tasks either share this <code class="language-plaintext highlighter-rouge">nsproxy</code> or has a derived copy of it.</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">nsproxy</span> <span class="n">init_nsproxy</span> <span class="o">=</span> <span class="p">{</span>
+	<span class="p">.</span><span class="n">count</span>			<span class="o">=</span> <span class="n">REFCOUNT_INIT</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span>
+	<span class="p">.</span><span class="n">uts_ns</span>			<span class="o">=</span> <span class="o">&amp;</span><span class="n">init_uts_ns</span><span class="p">,</span>
+<span class="cp">#if defined(CONFIG_POSIX_MQUEUE) || defined(CONFIG_SYSVIPC)
+</span>	<span class="p">.</span><span class="n">ipc_ns</span>			<span class="o">=</span> <span class="o">&amp;</span><span class="n">init_ipc_ns</span><span class="p">,</span>
+<span class="cp">#endif
+</span>	<span class="p">.</span><span class="n">mnt_ns</span>			<span class="o">=</span> <span class="nb">NULL</span><span class="p">,</span>
+	<span class="p">.</span><span class="n">pid_ns_for_children</span>	<span class="o">=</span> <span class="o">&amp;</span><span class="n">init_pid_ns</span><span class="p">,</span>
+<span class="cp">#ifdef CONFIG_NET
+</span>	<span class="p">.</span><span class="n">net_ns</span>			<span class="o">=</span> <span class="o">&amp;</span><span class="n">init_net</span><span class="p">,</span>
+<span class="cp">#endif
+#ifdef CONFIG_CGROUPS
+</span>	<span class="p">.</span><span class="n">cgroup_ns</span>		<span class="o">=</span> <span class="o">&amp;</span><span class="n">init_cgroup_ns</span><span class="p">,</span>
+<span class="cp">#endif
+#ifdef CONFIG_TIME_NS
+</span>	<span class="p">.</span><span class="n">time_ns</span>		<span class="o">=</span> <span class="o">&amp;</span><span class="n">init_time_ns</span><span class="p">,</span>
+	<span class="p">.</span><span class="n">time_ns_for_children</span>	<span class="o">=</span> <span class="o">&amp;</span><span class="n">init_time_ns</span><span class="p">,</span>
+<span class="cp">#endif
+</span><span class="p">};</span>
+</code></pre></div></div> <blockquote> <p>If you are wondering why <code class="language-plaintext highlighter-rouge">.mnt_ns = NULL</code>, it’s because the mount namespace does not exist at the time <code class="language-plaintext highlighter-rouge">init_nsproxy</code> is defined. Mount namespaces depend on VFS (Virtual File System) which is only initialized after boot. It is assigned later, after the VFS is initialized, the root filesystem is mounted, and the initial task’s <code class="language-plaintext highlighter-rouge">fs_struct</code> is set up.</p> </blockquote> <h2 id="how-a-namespace-is-created-using-clone">How a Namespace is Created Using <code class="language-plaintext highlighter-rouge">clone</code> </h2> <p>As was mentioned earlier, you can create namespaces using <code class="language-plaintext highlighter-rouge">clone</code>. <a href="https://man7.org/linux/man-pages/man2/clone.2.html" rel="external nofollow noopener" target="_blank"><code class="language-plaintext highlighter-rouge">clone</code></a> is a system call that is used to create a child task. It is similar to <a href="https://man7.org/linux/man-pages/man2/fork.2.html" rel="external nofollow noopener" target="_blank"><code class="language-plaintext highlighter-rouge">fork</code></a> but <code class="language-plaintext highlighter-rouge">fork</code> creates a child with an almost exact copy of the parent’s execution context, <code class="language-plaintext highlighter-rouge">clone</code> gives the caller fine-grained control over what gets shared and separated. In particular, when using <code class="language-plaintext highlighter-rouge">fork</code>, the child task inherits the namespaces (by sharing the same <code class="language-plaintext highlighter-rouge">nsproxy</code>) from the parent. Using <code class="language-plaintext highlighter-rouge">clone</code> allows the caller to specify the creation of new namespaces.</p> <p>I used the following code to demonstrate how to create a child process inside a new PID namespace:</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="o">*</span><span class="n">stack</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">malloc</span><span class="p">(</span><span class="n">STACK_SIZE</span><span class="p">);</span>
+
+<span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">stack</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">perror</span><span class="p">(</span><span class="s">"Failed to allocate memory for child stack"</span><span class="p">);</span>
+    <span class="k">return</span> <span class="n">EXIT_FAILURE</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="o">*</span><span class="n">stack_top</span> <span class="o">=</span> <span class="n">static_cast</span><span class="o">&lt;</span><span class="kt">char</span> <span class="o">*&gt;</span><span class="p">(</span><span class="n">stack</span><span class="p">)</span> <span class="o">+</span> <span class="n">STACK_SIZE</span><span class="p">;</span>
+
+<span class="n">pid_t</span> <span class="n">child_pid</span> <span class="o">=</span> <span class="n">clone</span><span class="p">(</span>
+    <span class="n">child_fn</span><span class="p">,</span>
+    <span class="n">stack_top</span><span class="p">,</span>
+    <span class="n">SIGCHLD</span> <span class="o">|</span> <span class="n">CLONE_NEWPID</span><span class="p">,</span>
+    <span class="n">nullptr</span>
+<span class="p">);</span>
+</code></pre></div></div> <p>The <code class="language-plaintext highlighter-rouge">clone</code> function in C takes in several arguments. The first argument is the function that is to be executed by the child process. The second argument is the child’s stack pointer (pointing to the top of the stack). The third argument is the most important, it holds the flags that can be passed by the caller. The flags dictate what to share and what to create. Namespaces are created by passing such flags (e.g. <code class="language-plaintext highlighter-rouge">CLONE_NEWPID</code> to create a new PID namespace, <code class="language-plaintext highlighter-rouge">CLONE_NEWNS</code> to create a new mount namespace, etc.) <code class="language-plaintext highlighter-rouge">clone</code> then calls the <code class="language-plaintext highlighter-rouge">copy_namespaces</code> function.</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/*
+ * called from clone.  This now handles copy for nsproxy and all
+ * namespaces therein.
+ */</span>
+<span class="kt">int</span> <span class="nf">copy_namespaces</span><span class="p">(</span><span class="n">u64</span> <span class="n">flags</span><span class="p">,</span> <span class="k">struct</span> <span class="n">task_struct</span> <span class="o">*</span><span class="n">tsk</span><span class="p">)</span>
+<span class="p">{</span>
+	<span class="k">struct</span> <span class="n">nsproxy</span> <span class="o">*</span><span class="n">old_ns</span> <span class="o">=</span> <span class="n">tsk</span><span class="o">-&gt;</span><span class="n">nsproxy</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">user_namespace</span> <span class="o">*</span><span class="n">user_ns</span> <span class="o">=</span> <span class="n">task_cred_xxx</span><span class="p">(</span><span class="n">tsk</span><span class="p">,</span> <span class="n">user_ns</span><span class="p">);</span>
+	<span class="k">struct</span> <span class="n">nsproxy</span> <span class="o">*</span><span class="n">new_ns</span><span class="p">;</span>
+
+	<span class="k">if</span> <span class="p">(</span><span class="n">likely</span><span class="p">(</span><span class="o">!</span><span class="p">(</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">CLONE_NEWNS</span> <span class="o">|</span> <span class="n">CLONE_NEWUTS</span> <span class="o">|</span> <span class="n">CLONE_NEWIPC</span> <span class="o">|</span>
+			      <span class="n">CLONE_NEWPID</span> <span class="o">|</span> <span class="n">CLONE_NEWNET</span> <span class="o">|</span>
+			      <span class="n">CLONE_NEWCGROUP</span> <span class="o">|</span> <span class="n">CLONE_NEWTIME</span><span class="p">))))</span> <span class="p">{</span>
+		<span class="k">if</span> <span class="p">((</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="n">CLONE_VM</span><span class="p">)</span> <span class="o">||</span>
+		    <span class="n">likely</span><span class="p">(</span><span class="n">old_ns</span><span class="o">-&gt;</span><span class="n">time_ns_for_children</span> <span class="o">==</span> <span class="n">old_ns</span><span class="o">-&gt;</span><span class="n">time_ns</span><span class="p">))</span> <span class="p">{</span>
+			<span class="n">get_nsproxy</span><span class="p">(</span><span class="n">old_ns</span><span class="p">);</span>
+			<span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+		<span class="p">}</span>
+	<span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">ns_capable</span><span class="p">(</span><span class="n">user_ns</span><span class="p">,</span> <span class="n">CAP_SYS_ADMIN</span><span class="p">))</span>
+		<span class="k">return</span> <span class="o">-</span><span class="n">EPERM</span><span class="p">;</span>
+
+	<span class="cm">/*
+	 * CLONE_NEWIPC must detach from the undolist: after switching
+	 * to a new ipc namespace, the semaphore arrays from the old
+	 * namespace are unreachable.  In clone parlance, CLONE_SYSVSEM
+	 * means share undolist with parent, so we must forbid using
+	 * it along with CLONE_NEWIPC.
+	 */</span>
+	<span class="k">if</span> <span class="p">((</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">CLONE_NEWIPC</span> <span class="o">|</span> <span class="n">CLONE_SYSVSEM</span><span class="p">))</span> <span class="o">==</span>
+		<span class="p">(</span><span class="n">CLONE_NEWIPC</span> <span class="o">|</span> <span class="n">CLONE_SYSVSEM</span><span class="p">))</span>
+		<span class="k">return</span> <span class="o">-</span><span class="n">EINVAL</span><span class="p">;</span>
+
+	<span class="n">new_ns</span> <span class="o">=</span> <span class="n">create_new_namespaces</span><span class="p">(</span><span class="n">flags</span><span class="p">,</span> <span class="n">tsk</span><span class="p">,</span> <span class="n">user_ns</span><span class="p">,</span> <span class="n">tsk</span><span class="o">-&gt;</span><span class="n">fs</span><span class="p">);</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">IS_ERR</span><span class="p">(</span><span class="n">new_ns</span><span class="p">))</span>
+		<span class="k">return</span>  <span class="n">PTR_ERR</span><span class="p">(</span><span class="n">new_ns</span><span class="p">);</span>
+
+	<span class="k">if</span> <span class="p">((</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="n">CLONE_VM</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+		<span class="n">timens_on_fork</span><span class="p">(</span><span class="n">new_ns</span><span class="p">,</span> <span class="n">tsk</span><span class="p">);</span>
+
+	<span class="n">tsk</span><span class="o">-&gt;</span><span class="n">nsproxy</span> <span class="o">=</span> <span class="n">new_ns</span><span class="p">;</span>
+	<span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div> <p>Let’s try to dissect this function.</p> <p>First, the parent’s <code class="language-plaintext highlighter-rouge">nsproxy</code> is retrieved along with the user namespace.</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">nsproxy</span> <span class="o">*</span><span class="n">old_ns</span> <span class="o">=</span> <span class="n">tsk</span><span class="o">-&gt;</span><span class="n">nsproxy</span><span class="p">;</span>
+<span class="k">struct</span> <span class="n">user_namespace</span> <span class="o">*</span><span class="n">user_ns</span> <span class="o">=</span> <span class="n">task_cred_xxx</span><span class="p">(</span><span class="n">tsk</span><span class="p">,</span> <span class="n">user_ns</span><span class="p">);</span>
+</code></pre></div></div> <p>Then it sees whether or not any new namespaces are requested. It checks if the flags contain any of the new namespace flags. If no namespaces are requested, it shares the parent’s <code class="language-plaintext highlighter-rouge">nsproxy</code>.</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">if</span> <span class="p">(</span><span class="n">likely</span><span class="p">(</span><span class="o">!</span><span class="p">(</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">CLONE_NEWNS</span> <span class="o">|</span> <span class="n">CLONE_NEWUTS</span> <span class="o">|</span> <span class="n">CLONE_NEWIPC</span> <span class="o">|</span>
+                <span class="n">CLONE_NEWPID</span> <span class="o">|</span> <span class="n">CLONE_NEWNET</span> <span class="o">|</span>
+                <span class="n">CLONE_NEWCGROUP</span> <span class="o">|</span> <span class="n">CLONE_NEWTIME</span><span class="p">))))</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">((</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="n">CLONE_VM</span><span class="p">)</span> <span class="o">||</span>
+        <span class="n">likely</span><span class="p">(</span><span class="n">old_ns</span><span class="o">-&gt;</span><span class="n">time_ns_for_children</span> <span class="o">==</span> <span class="n">old_ns</span><span class="o">-&gt;</span><span class="n">time_ns</span><span class="p">))</span> <span class="p">{</span>
+        <span class="n">get_nsproxy</span><span class="p">(</span><span class="n">old_ns</span><span class="p">);</span>
+        <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div> <p>If new namespaces are to be created, it checks whether the caller has permission. Specifically, the caller must have <code class="language-plaintext highlighter-rouge">CAP_SYS_ADMIN</code> in its user namespace.</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">ns_capable</span><span class="p">(</span><span class="n">user_ns</span><span class="p">,</span> <span class="n">CAP_SYS_ADMIN</span><span class="p">))</span>
+	<span class="k">return</span> <span class="o">-</span><span class="n">EPERM</span><span class="p">;</span>
+</code></pre></div></div> <p>Then, it creates the new namespaces.</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">new_ns</span> <span class="o">=</span> <span class="n">create_new_namespaces</span><span class="p">(</span><span class="n">flags</span><span class="p">,</span> <span class="n">tsk</span><span class="p">,</span> <span class="n">user_ns</span><span class="p">,</span> <span class="n">tsk</span><span class="o">-&gt;</span><span class="n">fs</span><span class="p">);</span>
+<span class="n">tsk</span><span class="o">-&gt;</span><span class="n">nsproxy</span> <span class="o">=</span> <span class="n">new_ns</span><span class="p">;</span>
+</code></pre></div></div> <p>In the end, the new child task will have a pointer to <code class="language-plaintext highlighter-rouge">new_ns</code>, whether it may be the same as its parent or a copy created on write version of it.</p> <blockquote> <p>Note: The newly created <code class="language-plaintext highlighter-rouge">task_struct</code> will by default have its <code class="language-plaintext highlighter-rouge">nsproxy</code> initialized to point at the parent’s <code class="language-plaintext highlighter-rouge">nsproxy</code>.</p> </blockquote> <p>Now, one must wonder what the <code class="language-plaintext highlighter-rouge">create_new_namespaces</code> function does (I hope you are).</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/*
+ * Create new nsproxy and all of its the associated namespaces.
+ * Return the newly created nsproxy.  Do not attach this to the task,
+ * leave it to the caller to do proper locking and attach it to task.
+ */</span>
+<span class="k">static</span> <span class="k">struct</span> <span class="n">nsproxy</span> <span class="o">*</span><span class="nf">create_new_namespaces</span><span class="p">(</span><span class="n">u64</span> <span class="n">flags</span><span class="p">,</span>
+	<span class="k">struct</span> <span class="n">task_struct</span> <span class="o">*</span><span class="n">tsk</span><span class="p">,</span> <span class="k">struct</span> <span class="n">user_namespace</span> <span class="o">*</span><span class="n">user_ns</span><span class="p">,</span>
+	<span class="k">struct</span> <span class="n">fs_struct</span> <span class="o">*</span><span class="n">new_fs</span><span class="p">)</span>
+<span class="p">{</span>
+	<span class="k">struct</span> <span class="n">nsproxy</span> <span class="o">*</span><span class="n">new_nsp</span><span class="p">;</span>
+	<span class="kt">int</span> <span class="n">err</span><span class="p">;</span>
+
+	<span class="n">new_nsp</span> <span class="o">=</span> <span class="n">create_nsproxy</span><span class="p">();</span>
+	<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">new_nsp</span><span class="p">)</span>
+		<span class="k">return</span> <span class="n">ERR_PTR</span><span class="p">(</span><span class="o">-</span><span class="n">ENOMEM</span><span class="p">);</span>
+
+	<span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">mnt_ns</span> <span class="o">=</span> <span class="n">copy_mnt_ns</span><span class="p">(</span><span class="n">flags</span><span class="p">,</span> <span class="n">tsk</span><span class="o">-&gt;</span><span class="n">nsproxy</span><span class="o">-&gt;</span><span class="n">mnt_ns</span><span class="p">,</span> <span class="n">user_ns</span><span class="p">,</span> <span class="n">new_fs</span><span class="p">);</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">IS_ERR</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">mnt_ns</span><span class="p">))</span> <span class="p">{</span>
+		<span class="n">err</span> <span class="o">=</span> <span class="n">PTR_ERR</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">mnt_ns</span><span class="p">);</span>
+		<span class="k">goto</span> <span class="n">out_ns</span><span class="p">;</span>
+	<span class="p">}</span>
+
+	<span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">uts_ns</span> <span class="o">=</span> <span class="n">copy_utsname</span><span class="p">(</span><span class="n">flags</span><span class="p">,</span> <span class="n">user_ns</span><span class="p">,</span> <span class="n">tsk</span><span class="o">-&gt;</span><span class="n">nsproxy</span><span class="o">-&gt;</span><span class="n">uts_ns</span><span class="p">);</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">IS_ERR</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">uts_ns</span><span class="p">))</span> <span class="p">{</span>
+		<span class="n">err</span> <span class="o">=</span> <span class="n">PTR_ERR</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">uts_ns</span><span class="p">);</span>
+		<span class="k">goto</span> <span class="n">out_uts</span><span class="p">;</span>
+	<span class="p">}</span>
+
+	<span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">ipc_ns</span> <span class="o">=</span> <span class="n">copy_ipcs</span><span class="p">(</span><span class="n">flags</span><span class="p">,</span> <span class="n">user_ns</span><span class="p">,</span> <span class="n">tsk</span><span class="o">-&gt;</span><span class="n">nsproxy</span><span class="o">-&gt;</span><span class="n">ipc_ns</span><span class="p">);</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">IS_ERR</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">ipc_ns</span><span class="p">))</span> <span class="p">{</span>
+		<span class="n">err</span> <span class="o">=</span> <span class="n">PTR_ERR</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">ipc_ns</span><span class="p">);</span>
+		<span class="k">goto</span> <span class="n">out_ipc</span><span class="p">;</span>
+	<span class="p">}</span>
+
+	<span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">pid_ns_for_children</span> <span class="o">=</span>
+		<span class="n">copy_pid_ns</span><span class="p">(</span><span class="n">flags</span><span class="p">,</span> <span class="n">user_ns</span><span class="p">,</span> <span class="n">tsk</span><span class="o">-&gt;</span><span class="n">nsproxy</span><span class="o">-&gt;</span><span class="n">pid_ns_for_children</span><span class="p">);</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">IS_ERR</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">pid_ns_for_children</span><span class="p">))</span> <span class="p">{</span>
+		<span class="n">err</span> <span class="o">=</span> <span class="n">PTR_ERR</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">pid_ns_for_children</span><span class="p">);</span>
+		<span class="k">goto</span> <span class="n">out_pid</span><span class="p">;</span>
+	<span class="p">}</span>
+
+	<span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">cgroup_ns</span> <span class="o">=</span> <span class="n">copy_cgroup_ns</span><span class="p">(</span><span class="n">flags</span><span class="p">,</span> <span class="n">user_ns</span><span class="p">,</span>
+					    <span class="n">tsk</span><span class="o">-&gt;</span><span class="n">nsproxy</span><span class="o">-&gt;</span><span class="n">cgroup_ns</span><span class="p">);</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">IS_ERR</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">cgroup_ns</span><span class="p">))</span> <span class="p">{</span>
+		<span class="n">err</span> <span class="o">=</span> <span class="n">PTR_ERR</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">cgroup_ns</span><span class="p">);</span>
+		<span class="k">goto</span> <span class="n">out_cgroup</span><span class="p">;</span>
+	<span class="p">}</span>
+
+	<span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">net_ns</span> <span class="o">=</span> <span class="n">copy_net_ns</span><span class="p">(</span><span class="n">flags</span><span class="p">,</span> <span class="n">user_ns</span><span class="p">,</span> <span class="n">tsk</span><span class="o">-&gt;</span><span class="n">nsproxy</span><span class="o">-&gt;</span><span class="n">net_ns</span><span class="p">);</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">IS_ERR</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">net_ns</span><span class="p">))</span> <span class="p">{</span>
+		<span class="n">err</span> <span class="o">=</span> <span class="n">PTR_ERR</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">net_ns</span><span class="p">);</span>
+		<span class="k">goto</span> <span class="n">out_net</span><span class="p">;</span>
+	<span class="p">}</span>
+
+	<span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">time_ns_for_children</span> <span class="o">=</span> <span class="n">copy_time_ns</span><span class="p">(</span><span class="n">flags</span><span class="p">,</span> <span class="n">user_ns</span><span class="p">,</span>
+					<span class="n">tsk</span><span class="o">-&gt;</span><span class="n">nsproxy</span><span class="o">-&gt;</span><span class="n">time_ns_for_children</span><span class="p">);</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">IS_ERR</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">time_ns_for_children</span><span class="p">))</span> <span class="p">{</span>
+		<span class="n">err</span> <span class="o">=</span> <span class="n">PTR_ERR</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">time_ns_for_children</span><span class="p">);</span>
+		<span class="k">goto</span> <span class="n">out_time</span><span class="p">;</span>
+	<span class="p">}</span>
+	<span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">time_ns</span> <span class="o">=</span> <span class="n">get_time_ns</span><span class="p">(</span><span class="n">tsk</span><span class="o">-&gt;</span><span class="n">nsproxy</span><span class="o">-&gt;</span><span class="n">time_ns</span><span class="p">);</span>
+
+	<span class="k">return</span> <span class="n">new_nsp</span><span class="p">;</span>
+
+<span class="nl">out_time:</span>
+	<span class="n">put_net</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">net_ns</span><span class="p">);</span>
+<span class="nl">out_net:</span>
+	<span class="n">put_cgroup_ns</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">cgroup_ns</span><span class="p">);</span>
+<span class="nl">out_cgroup:</span>
+	<span class="n">put_pid_ns</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">pid_ns_for_children</span><span class="p">);</span>
+<span class="nl">out_pid:</span>
+	<span class="n">put_ipc_ns</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">ipc_ns</span><span class="p">);</span>
+<span class="nl">out_ipc:</span>
+	<span class="n">put_uts_ns</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">uts_ns</span><span class="p">);</span>
+<span class="nl">out_uts:</span>
+	<span class="n">put_mnt_ns</span><span class="p">(</span><span class="n">new_nsp</span><span class="o">-&gt;</span><span class="n">mnt_ns</span><span class="p">);</span>
+<span class="nl">out_ns:</span>
+	<span class="n">kmem_cache_free</span><span class="p">(</span><span class="n">nsproxy_cachep</span><span class="p">,</span> <span class="n">new_nsp</span><span class="p">);</span>
+	<span class="k">return</span> <span class="n">ERR_PTR</span><span class="p">(</span><span class="n">err</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div> <p>First it initializes an empty <code class="language-plaintext highlighter-rouge">nsproxy</code>. Then, for each individual namespace (say PID namespace), it checks if the flag has that particular namespace (if <code class="language-plaintext highlighter-rouge">flag &amp; CLONE_NEWPID</code>). If it does, it creates a brand new namespace, otherwise it will reuse the existing namespace by incrementing the reference count.</p> <p>Here’s an example for PID namespaces:</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">pid_namespace</span> <span class="o">*</span><span class="nf">copy_pid_ns</span><span class="p">(</span><span class="n">u64</span> <span class="n">flags</span><span class="p">,</span>
+	<span class="k">struct</span> <span class="n">user_namespace</span> <span class="o">*</span><span class="n">user_ns</span><span class="p">,</span> <span class="k">struct</span> <span class="n">pid_namespace</span> <span class="o">*</span><span class="n">old_ns</span><span class="p">)</span>
+<span class="p">{</span>
+	<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="p">(</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="n">CLONE_NEWPID</span><span class="p">))</span>
+		<span class="k">return</span> <span class="n">get_pid_ns</span><span class="p">(</span><span class="n">old_ns</span><span class="p">);</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">task_active_pid_ns</span><span class="p">(</span><span class="n">current</span><span class="p">)</span> <span class="o">!=</span> <span class="n">old_ns</span><span class="p">)</span>
+		<span class="k">return</span> <span class="n">ERR_PTR</span><span class="p">(</span><span class="o">-</span><span class="n">EINVAL</span><span class="p">);</span>
+	<span class="k">return</span> <span class="n">create_pid_namespace</span><span class="p">(</span><span class="n">user_ns</span><span class="p">,</span> <span class="n">old_ns</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div> <h2 id="namespaces-from-the-kernels-pov">Namespaces from the Kernel’s POV</h2> <p>Now that we know how namespaces are created for each task, we can be curious about how namespaces are represented by the kernel, hopefully curiosity doesn’t kill the engineer.</p> <p>Let’s take a closer look at <code class="language-plaintext highlighter-rouge">struct pid_namespace</code>.</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">pid_namespace</span> <span class="p">{</span>
+	<span class="k">struct</span> <span class="n">idr</span> <span class="n">idr</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">rcu_head</span> <span class="n">rcu</span><span class="p">;</span>
+	<span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">pid_allocated</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">task_struct</span> <span class="o">*</span><span class="n">child_reaper</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">kmem_cache</span> <span class="o">*</span><span class="n">pid_cachep</span><span class="p">;</span>
+	<span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">level</span><span class="p">;</span>
+	<span class="kt">int</span> <span class="n">pid_max</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">pid_namespace</span> <span class="o">*</span><span class="n">parent</span><span class="p">;</span>
+<span class="cp">#ifdef CONFIG_BSD_PROCESS_ACCT
+</span>	<span class="k">struct</span> <span class="n">fs_pin</span> <span class="o">*</span><span class="n">bacct</span><span class="p">;</span>
+<span class="cp">#endif
+</span>	<span class="k">struct</span> <span class="n">user_namespace</span> <span class="o">*</span><span class="n">user_ns</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">ucounts</span> <span class="o">*</span><span class="n">ucounts</span><span class="p">;</span>
+	<span class="kt">int</span> <span class="n">reboot</span><span class="p">;</span>	<span class="cm">/* group exit code if this pidns was rebooted */</span>
+	<span class="k">struct</span> <span class="n">ns_common</span> <span class="n">ns</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">work_struct</span>	<span class="n">work</span><span class="p">;</span>
+<span class="cp">#ifdef CONFIG_SYSCTL
+</span>	<span class="k">struct</span> <span class="n">ctl_table_set</span>	<span class="n">set</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">ctl_table_header</span> <span class="o">*</span><span class="n">sysctls</span><span class="p">;</span>
+<span class="cp">#if defined(CONFIG_MEMFD_CREATE)
+</span>	<span class="kt">int</span> <span class="n">memfd_noexec_scope</span><span class="p">;</span>
+<span class="cp">#endif
+#endif
+</span><span class="p">}</span> <span class="n">__randomize_layout</span><span class="p">;</span>
+</code></pre></div></div> <p>You know what, we can find more patterns if we use another one. Here’s <code class="language-plaintext highlighter-rouge">struct mnt_namespace</code>:</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">mnt_namespace</span> <span class="p">{</span>
+	<span class="k">struct</span> <span class="n">ns_common</span>	<span class="n">ns</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">mount</span> <span class="o">*</span>	<span class="n">root</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="p">{</span>
+		<span class="k">struct</span> <span class="n">rb_root</span>	<span class="n">mounts</span><span class="p">;</span>		 <span class="cm">/* Protected by namespace_sem */</span>
+		<span class="k">struct</span> <span class="n">rb_node</span>	<span class="o">*</span><span class="n">mnt_last_node</span><span class="p">;</span>	 <span class="cm">/* last (rightmost) mount in the rbtree */</span>
+		<span class="k">struct</span> <span class="n">rb_node</span>	<span class="o">*</span><span class="n">mnt_first_node</span><span class="p">;</span> <span class="cm">/* first (leftmost) mount in the rbtree */</span>
+	<span class="p">};</span>
+	<span class="k">struct</span> <span class="n">user_namespace</span>	<span class="o">*</span><span class="n">user_ns</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">ucounts</span>		<span class="o">*</span><span class="n">ucounts</span><span class="p">;</span>
+	<span class="n">wait_queue_head_t</span>	<span class="n">poll</span><span class="p">;</span>
+	<span class="n">u64</span>			<span class="n">seq_origin</span><span class="p">;</span> <span class="cm">/* Sequence number of origin mount namespace */</span>
+	<span class="n">u64</span> <span class="n">event</span><span class="p">;</span>
+<span class="cp">#ifdef CONFIG_FSNOTIFY
+</span>	<span class="n">__u32</span>			<span class="n">n_fsnotify_mask</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">fsnotify_mark_connector</span> <span class="n">__rcu</span> <span class="o">*</span><span class="n">n_fsnotify_marks</span><span class="p">;</span>
+<span class="cp">#endif
+</span>	<span class="kt">unsigned</span> <span class="kt">int</span>		<span class="n">nr_mounts</span><span class="p">;</span> <span class="cm">/* # of mounts in the namespace */</span>
+	<span class="kt">unsigned</span> <span class="kt">int</span>		<span class="n">pending_mounts</span><span class="p">;</span>
+	<span class="n">refcount_t</span>		<span class="n">passive</span><span class="p">;</span> <span class="cm">/* number references not pinning @mounts */</span>
+<span class="p">}</span> <span class="n">__randomize_layout</span><span class="p">;</span>
+</code></pre></div></div> <p>Namespaces have a generic <code class="language-plaintext highlighter-rouge">ns</code> field which contains a <code class="language-plaintext highlighter-rouge">struct ns_common</code>.</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">ns_common</span> <span class="p">{</span>
+	<span class="n">u32</span> <span class="n">ns_type</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">dentry</span> <span class="o">*</span><span class="n">stashed</span><span class="p">;</span>
+	<span class="k">const</span> <span class="k">struct</span> <span class="n">proc_ns_operations</span> <span class="o">*</span><span class="n">ops</span><span class="p">;</span>
+	<span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">inum</span><span class="p">;</span>
+	<span class="n">refcount_t</span> <span class="n">__ns_ref</span><span class="p">;</span> <span class="cm">/* do not use directly */</span>
+	<span class="k">union</span> <span class="p">{</span>
+		<span class="k">struct</span> <span class="p">{</span>
+			<span class="n">u64</span> <span class="n">ns_id</span><span class="p">;</span>
+			<span class="k">struct</span> <span class="n">rb_node</span> <span class="n">ns_tree_node</span><span class="p">;</span>
+			<span class="k">struct</span> <span class="n">list_head</span> <span class="n">ns_list_node</span><span class="p">;</span>
+		<span class="p">};</span>
+		<span class="k">struct</span> <span class="n">rcu_head</span> <span class="n">ns_rcu</span><span class="p">;</span>
+	<span class="p">};</span>
+<span class="p">};</span>
+</code></pre></div></div> <p><code class="language-plaintext highlighter-rouge">ns_common</code> serves as the kernel’s generic “base struct” for namespaces. It lets the kernel identify namespaces, expose namespaces to user space (e.g. via <code class="language-plaintext highlighter-rouge">/proc/&lt;pid&gt;/ns/*</code>), manage namespace lifetimes (by refcounting and RCU), and track namespaces globally.</p> <p>Each namespace struct also commonly have a user namespace field, mainly for permissions checking.</p> <h2 id="getpid-in-a-pid-namespace"> <code class="language-plaintext highlighter-rouge">getpid()</code> in a PID Namespace</h2> <p>We have seen how namespaces are created and what namespaces look like, but practically, we want to know how is it used. For example, how is it possible that <code class="language-plaintext highlighter-rouge">getpid()</code> in a user namespace yields a different result if the same process exists in a different namespace.</p> <p>I made a simple C (actually C++) code that creates a child process in a PID namespace. The parent prints the PID of the child process from the perspective of the parent and the child does the same. The code looks like this:</p> <div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#define _GNU_SOURCE
+#include</span> <span class="cpf">&lt;sched.h&gt;</span><span class="cp">
+#include</span> <span class="cpf">&lt;signal.h&gt;</span><span class="cp">
+#include</span> <span class="cpf">&lt;sys/wait.h&gt;</span><span class="cp">
+#include</span> <span class="cpf">&lt;unistd.h&gt;</span><span class="cp">
+</span>
+<span class="cp">#include</span> <span class="cpf">&lt;cstdlib&gt;</span><span class="cp">
+#include</span> <span class="cpf">&lt;iostream&gt;</span><span class="cp">
+</span>
+<span class="k">constexpr</span> <span class="kt">size_t</span> <span class="n">STACK_SIZE</span> <span class="o">=</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">;</span>
+
+<span class="kt">int</span> <span class="nf">child_fn</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">arg</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"[child] getpid() = "</span> <span class="o">&lt;&lt;</span> <span class="n">getpid</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"[child] getppid() = "</span> <span class="o">&lt;&lt;</span> <span class="n">getppid</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"[parent] getpid() = "</span> <span class="o">&lt;&lt;</span> <span class="n">getpid</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"[parent] getppid() = "</span> <span class="o">&lt;&lt;</span> <span class="n">getppid</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+
+    <span class="kt">void</span> <span class="o">*</span><span class="n">stack</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">malloc</span><span class="p">(</span><span class="n">STACK_SIZE</span><span class="p">);</span>
+
+    <span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="n">stack</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">perror</span><span class="p">(</span><span class="s">"Failed to allocate memory for child stack"</span><span class="p">);</span>
+        <span class="k">return</span> <span class="n">EXIT_FAILURE</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="kt">void</span> <span class="o">*</span><span class="n">stack_top</span> <span class="o">=</span> <span class="k">static_cast</span><span class="o">&lt;</span><span class="kt">char</span> <span class="o">*&gt;</span><span class="p">(</span><span class="n">stack</span><span class="p">)</span> <span class="o">+</span> <span class="n">STACK_SIZE</span><span class="p">;</span>
+
+    <span class="n">pid_t</span> <span class="n">child_pid</span> <span class="o">=</span> <span class="n">clone</span><span class="p">(</span>
+        <span class="n">child_fn</span><span class="p">,</span>
+        <span class="n">stack_top</span><span class="p">,</span>
+        <span class="n">SIGCHLD</span> <span class="o">|</span> <span class="n">CLONE_NEWPID</span><span class="p">,</span>
+        <span class="nb">nullptr</span>
+    <span class="p">);</span>
+
+    <span class="k">if</span><span class="p">(</span><span class="n">child_pid</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">perror</span><span class="p">(</span><span class="s">"Failed to create child process"</span><span class="p">);</span>
+        <span class="n">std</span><span class="o">::</span><span class="n">free</span><span class="p">(</span><span class="n">stack</span><span class="p">);</span>
+        <span class="k">return</span> <span class="n">EXIT_FAILURE</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"[parent] Created child process with PID: "</span> <span class="o">&lt;&lt;</span> <span class="n">child_pid</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+
+    <span class="kt">int</span> <span class="n">status</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="n">waitpid</span><span class="p">(</span><span class="n">child_pid</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">status</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+
+    <span class="n">std</span><span class="o">::</span><span class="n">free</span><span class="p">(</span><span class="n">stack</span><span class="p">);</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>g++ <span class="nt">-D_GNU_SOURCE</span> <span class="nt">-std</span><span class="o">=</span>c++23 <span class="nt">-Wall</span> <span class="nt">-Wextra</span> pidns_getpid.cpp <span class="nt">-o</span> pidns_getpid
+</code></pre></div></div> <p>The output is as follows:</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>[parent] getpid() = 387665
+[parent] getppid() = 387664
+[parent] Created child process with PID: 387666
+[child] getpid() = 1
+[child] getppid() = 0
+</code></pre></div></div> <blockquote> <p><code class="language-plaintext highlighter-rouge">getppid()</code> gets the PID of the parent.</p> </blockquote> <p>First, we need to know what <code class="language-plaintext highlighter-rouge">getpid()</code> does. Internally, <code class="language-plaintext highlighter-rouge">getpid()</code> calls <code class="language-plaintext highlighter-rouge">task_tgid_vnr()</code> which is a kernel helper that returns a task’s process ID (TGID). <code class="language-plaintext highlighter-rouge">task_tgid_vnr()</code> calls <code class="language-plaintext highlighter-rouge">__task_pid_nr_ns()</code>. For more details see <a href="https://elixir.bootlin.com/linux/v6.18.3/source/kernel/pid.c#L510" rel="external nofollow noopener" target="_blank">here</a>.</p> <blockquote> <p>TGID is what the userspace calls the process ID</p> </blockquote> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">static</span> <span class="kr">inline</span> <span class="n">pid_t</span> <span class="nf">task_tgid_vnr</span><span class="p">(</span><span class="k">struct</span> <span class="n">task_struct</span> <span class="o">*</span><span class="n">tsk</span><span class="p">)</span>
+<span class="p">{</span>
+	<span class="k">return</span> <span class="n">__task_pid_nr_ns</span><span class="p">(</span><span class="n">tsk</span><span class="p">,</span> <span class="n">PIDTYPE_TGID</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">pid_t</span> <span class="nf">__task_pid_nr_ns</span><span class="p">(</span><span class="k">struct</span> <span class="n">task_struct</span> <span class="o">*</span><span class="n">task</span><span class="p">,</span> <span class="k">enum</span> <span class="n">pid_type</span> <span class="n">type</span><span class="p">,</span>
+			<span class="k">struct</span> <span class="n">pid_namespace</span> <span class="o">*</span><span class="n">ns</span><span class="p">)</span>
+<span class="p">{</span>
+	<span class="n">pid_t</span> <span class="n">nr</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+	<span class="n">rcu_read_lock</span><span class="p">();</span>
+	<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">ns</span><span class="p">)</span>
+		<span class="n">ns</span> <span class="o">=</span> <span class="n">task_active_pid_ns</span><span class="p">(</span><span class="n">current</span><span class="p">);</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">ns</span><span class="p">)</span>
+		<span class="n">nr</span> <span class="o">=</span> <span class="n">pid_nr_ns</span><span class="p">(</span><span class="n">rcu_dereference</span><span class="p">(</span><span class="o">*</span><span class="n">task_pid_ptr</span><span class="p">(</span><span class="n">task</span><span class="p">,</span> <span class="n">type</span><span class="p">)),</span> <span class="n">ns</span><span class="p">);</span>
+	<span class="n">rcu_read_unlock</span><span class="p">();</span>
+
+	<span class="k">return</span> <span class="n">nr</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div> <p>Since <code class="language-plaintext highlighter-rouge">pid_namespace</code> is <code class="language-plaintext highlighter-rouge">NULL</code>, it uses the current PID namespace. Then it calls <code class="language-plaintext highlighter-rouge">pid_nr_ns</code>.</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">pid_t</span> <span class="nf">pid_nr_ns</span><span class="p">(</span><span class="k">struct</span> <span class="n">pid</span> <span class="o">*</span><span class="n">pid</span><span class="p">,</span> <span class="k">struct</span> <span class="n">pid_namespace</span> <span class="o">*</span><span class="n">ns</span><span class="p">)</span>
+<span class="p">{</span>
+	<span class="k">struct</span> <span class="n">upid</span> <span class="o">*</span><span class="n">upid</span><span class="p">;</span>
+	<span class="n">pid_t</span> <span class="n">nr</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+	<span class="k">if</span> <span class="p">(</span><span class="n">pid</span> <span class="o">&amp;&amp;</span> <span class="n">ns</span> <span class="o">&amp;&amp;</span> <span class="n">ns</span><span class="o">-&gt;</span><span class="n">level</span> <span class="o">&lt;=</span> <span class="n">pid</span><span class="o">-&gt;</span><span class="n">level</span><span class="p">)</span> <span class="p">{</span>
+		<span class="n">upid</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">pid</span><span class="o">-&gt;</span><span class="n">numbers</span><span class="p">[</span><span class="n">ns</span><span class="o">-&gt;</span><span class="n">level</span><span class="p">];</span>
+		<span class="k">if</span> <span class="p">(</span><span class="n">upid</span><span class="o">-&gt;</span><span class="n">ns</span> <span class="o">==</span> <span class="n">ns</span><span class="p">)</span>
+			<span class="n">nr</span> <span class="o">=</span> <span class="n">upid</span><span class="o">-&gt;</span><span class="n">nr</span><span class="p">;</span>
+	<span class="p">}</span>
+	<span class="k">return</span> <span class="n">nr</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div> <p>PID numbers are stored in the task’s <code class="language-plaintext highlighter-rouge">struct pid</code>.</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">pid</span> <span class="p">{</span>
+	<span class="n">refcount_t</span> <span class="n">count</span><span class="p">;</span>
+	<span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">level</span><span class="p">;</span>
+	<span class="n">spinlock_t</span> <span class="n">lock</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="p">{</span>
+		<span class="n">u64</span> <span class="n">ino</span><span class="p">;</span>
+		<span class="k">struct</span> <span class="n">rb_node</span> <span class="n">pidfs_node</span><span class="p">;</span>
+		<span class="k">struct</span> <span class="n">dentry</span> <span class="o">*</span><span class="n">stashed</span><span class="p">;</span>
+		<span class="k">struct</span> <span class="n">pidfs_attr</span> <span class="o">*</span><span class="n">attr</span><span class="p">;</span>
+	<span class="p">};</span>
+	<span class="cm">/* lists of tasks that use this pid */</span>
+	<span class="k">struct</span> <span class="n">hlist_head</span> <span class="n">tasks</span><span class="p">[</span><span class="n">PIDTYPE_MAX</span><span class="p">];</span>
+	<span class="k">struct</span> <span class="n">hlist_head</span> <span class="n">inodes</span><span class="p">;</span>
+	<span class="cm">/* wait queue for pidfd notifications */</span>
+	<span class="n">wait_queue_head_t</span> <span class="n">wait_pidfd</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">rcu_head</span> <span class="n">rcu</span><span class="p">;</span>
+	<span class="k">struct</span> <span class="n">upid</span> <span class="n">numbers</span><span class="p">[];</span>
+<span class="p">};</span>
+</code></pre></div></div> <p><code class="language-plaintext highlighter-rouge">numbers[]</code> store the PID as seen in different namespaces. PID namespace is hierarchical, it is stored in a flat array of <code class="language-plaintext highlighter-rouge">struct upid</code> where <code class="language-plaintext highlighter-rouge">numbers[level]</code> holds the PID of the process as seen in the namespace of depth <code class="language-plaintext highlighter-rouge">level</code>. So a task that lives in a deep namespace has multiple valid PIDs - one per ancestor namespace.</p> <p>For example, assume the hierarchy looks like this:</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>init_pid_ns
+  └── container_pid_ns
+        └── nested_pid_ns
+</code></pre></div></div> <p>The array will be structured like this:</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pid-&gt;numbers[0] → host PID
+pid-&gt;numbers[1] → container PID
+pid-&gt;numbers[2] → nested PID
+</code></pre></div></div> <p>Basically, <code class="language-plaintext highlighter-rouge">pid_nr_ns</code> retrieves the PID of the task associated to the current namespace. A long explanation for a simple conclusion.</p> <h2 id="conclusion">Conclusion</h2> <p>The kernel is namespace-aware. When a function is called to read some namespaced resource (e.g. PIDs, mounts, network interfaces), the kernel determines the active namespace of the caller task and uses the namespace object to view resources. Each namespace maintains its own state, thus just by following pointers, the kernel is able to return different results depending on the caller’s namespace context.</p> <p>This is my first time doing a deep dive on kernel code. If there are anything that needs clarification or fixing, please do <a href="mailto:joshjms1607@gmail.com">email</a> me. Many thanks for reading this far!</p> </div> </article> </div> </div> <footer class="fixed-bottom" role="contentinfo"> <div class="container mt-0"> © Copyright 2026 Joshua James. </div> </footer> <script>
+  window.alFolio = {
+    compatBootstrap: false
+  };
+</script> <script src="/assets/js/nav-toggle.js?v=141bd79a73ebc0f0b6ea58e440ae79fc"></script> <script defer src="https://cdn.jsdelivr.net/npm/masonry-layout@4.2.2/dist/masonry.pkgd.min.js" integrity="sha256-Nn1q/fx0H7SNLZMQ5Hw5JLaTRZp0yILA/FRexe19VdI=" crossorigin="anonymous"></script> <script defer src="https://cdn.jsdelivr.net/npm/imagesloaded@5.0.0/imagesloaded.pkgd.min.js" integrity="sha256-htrLFfZJ6v5udOG+3kNLINIKh2gvoKqwEhHYfTTMICc=" crossorigin="anonymous"></script> <script defer src="/assets/js/masonry.js?v=e49affc7bd2646f6acdad1dbe02c2359" type="text/javascript"></script> <script defer type="text/javascript" id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js" integrity="sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI=" crossorigin="anonymous"></script> <script src="/assets/al_math/js/mathjax-setup.js"></script> <script src="/assets/js/tooltips-setup.js?v=fe487e99db6c43751e6e7bdb2d6a0611"></script> <script src="/assets/js/no_defer.js?v=53b1b1a645525975c963ce8bf8bfefcf"></script> <script defer src="/assets/js/common.js?v=87baac90f765f2f3362dcf6aaf312a8a"></script> <script defer src="/assets/js/copy_code.js?v=c8a01c11a92744d44b093fc3bda915df" type="text/javascript"></script> <script defer src="/assets/js/jupyter_new_tab.js?v=896d254890d9b47f0281f63bfccf0dee"></script> <script async src="https://d1bxh8uas1mnw7.cloudfront.net/assets/embed.js"></script> <script async src="https://badge.dimensions.ai/badge.js"></script> <script defer src="https://cdn.jsdelivr.net/npm/medium-zoom@1.1.0/dist/medium-zoom.min.js" integrity="sha256-ZgMyDAIYDYGxbcpJcfUnYwNevG/xi9OHKaR/8GK+jWc=" crossorigin="anonymous"></script> <script defer src="/assets/al_img_tools/js/zoom.js"></script> <script defer src="/assets/js/progress-bar.js?v=499464c5c63ced6cf7ad62509f1e2610" type="text/javascript"></script> <script src="https://cdn.jsdelivr.net/npm/vanilla-back-to-top@7.2.1/dist/vanilla-back-to-top.min.js" integrity="sha256-uMJJ3EoTyfRBoTbR+lrfu1uRQ87RZG8AR3cVNuQVeFg=" crossorigin="anonymous"></script> <script>
+    addBackToTop();
+  </script> <script type="module" src="/assets/al_search/js/search/ninja-keys.min.js"></script> <ninja-keys hidebreadcrumbs noautoloadmdicons placeholder="Type to start searching"></ninja-keys> <script src="/assets/al_search/js/search-setup.js"></script> <script>
+// get the ninja-keys element
+const ninja = document.querySelector('ninja-keys');
+
+// add the home and posts menu items
+ninja.data = [{
+    id: "nav-about",
+    title: "about",
+    section: "Navigation",
+    handler: () => {
+      window.location.href = "/";
+    },
+  },{id: "nav-blog",
+          title: "blog",
+          description: "",
+          section: "Navigation",
+          handler: () => {
+            window.location.href = "/blog/";
+          },
+        },{id: "nav-repositories",
+          title: "repositories",
+          description: "GitHub has an unplanned uptime.",
+          section: "Navigation",
+          handler: () => {
+            window.location.href = "/repositories/";
+          },
+        },{id: "nav-cv",
+          title: "CV",
+          description: "A summary of my experiences.",
+          section: "Navigation",
+          handler: () => {
+            window.location.href = "/cv/";
+          },
+        },{id: "post-cadencia-automatic-beatmap-generator-for-osu-mania",
+        
+          title: "Cadencia: Automatic Beatmap Generator for osu!mania",
+        
+        description: "Training a model for automatic generation of 4K osu!mania beatmap for arbitrary songs.",
+        section: "Posts",
+        handler: () => {
+          
+            window.location.href = "/blog/2026/cadencia/";
+          
+        },
+      },{id: "post-linux-namespaces-from-inside-the-kernel",
+        
+          title: "Linux Namespaces From Inside the Kernel",
+        
+        description: "A deep dive into how Linux namespaces actually work inside the Linux kernel.",
+        section: "Posts",
+        handler: () => {
+          
+            window.location.href = "/blog/2026/linux-namespaces-from-inside-the-kernel/";
+          
+        },
+      },{id: "books-the-godfather",
+          title: 'The Godfather',
+          description: "",
+          section: "Books",handler: () => {
+              window.location.href = "/books/the_godfather/";
+            },},{id: "news-migrated-blog-sparkles-sparkles",
+          title: 'Migrated blog! <img class="emoji" title=":sparkles:" alt=":sparkles:" src="https://github.githubassets.com/images/icons/emoji/unicode/2728.png" height="20" width="20"> <img class="emoji" title=":sparkles:" alt=":sparkles:" src="https://github.githubassets.com/images/icons/emoji/unicode/2728.png" height="20" width="20">',
+          description: "",
+          section: "News",},{
+        id: 'social-cv',
+        title: 'CV',
+        section: 'Socials',
+        handler: () => {
+          window.open("/assets/pdf/example_pdf.pdf", "_blank");
+        },
+      },{
+        id: 'social-email',
+        title: 'email',
+        section: 'Socials',
+        handler: () => {
+          window.open("mailto:%6A%6F%73%68%6A%6D%73%31%36%30%37@%67%6D%61%69%6C.%63%6F%6D", "_blank");
+        },
+      },{
+      id: 'light-theme',
+      title: 'Change theme to light',
+      description: 'Change the theme of the site to Light',
+      section: 'Theme',
+      handler: () => {
+        setThemeSetting("light");
+      },
+    },
+    {
+      id: 'dark-theme',
+      title: 'Change theme to dark',
+      description: 'Change the theme of the site to Dark',
+      section: 'Theme',
+      handler: () => {
+        setThemeSetting("dark");
+      },
+    },
+    {
+      id: 'system-theme',
+      title: 'Use system default theme',
+      description: 'Change the theme of the site to System Default',
+      section: 'Theme',
+      handler: () => {
+        setThemeSetting("system");
+      },
+    },];
+
+</script> <script src="/assets/al_search/js/shortcut-key.js"></script> </body> </html>
