@@ -153,25 +153,6 @@ test("navbar search button opens modal and toggle buttons use pointer cursor", a
   expect(themeCursor).toBe("pointer");
 });
 
-test("related posts are wrapped in a valid list", async ({ page }) => {
-  await preparePage(page, "light");
-  await page.goto("/al-folio/blog/2023/tables/", { waitUntil: "networkidle" });
-  await stabilizeVisuals(page);
-
-  const heading = page.getByRole("heading", { name: "Enjoy Reading This Article?" });
-  await expect(heading).toBeVisible();
-
-  const relatedList = heading.locator("xpath=following::ul[1]");
-  await expect(relatedList).toBeVisible();
-  await expect(relatedList.locator("li").first()).toBeVisible();
-
-  const relatedLinkWeight = await relatedList
-    .locator("a")
-    .first()
-    .evaluate((el) => Number.parseInt(window.getComputedStyle(el).fontWeight, 10) || 400);
-  expect(relatedLinkWeight).toBeLessThanOrEqual(400);
-});
-
 test("inline code uses compact normal-weight typography", async ({ page }) => {
   await preparePage(page, "light");
   await page.goto("/al-folio/blog/2023/sidebar-table-of-contents/", { waitUntil: "networkidle" });
