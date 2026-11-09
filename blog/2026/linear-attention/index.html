@@ -1,0 +1,251 @@
+<!DOCTYPE html> <html lang="en"> <head> <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"> <meta charset="utf-8"> <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"> <meta http-equiv="X-UA-Compatible" content="IE=edge"> <title> Linear Attention | joshjms </title> <meta name="author" content="Joshua James"> <meta name="description" content="The mathematics and code implementation of linear attention."> <meta name="keywords" content="nerd"> <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data: https:; media-src 'self' https:; frame-src 'self' https:; connect-src 'self' https:;"> <style>
+  :root {
+    --max-content-width: 930px;
+  }
+</style> <link rel="stylesheet" href="/assets/css/tailwind.css?v=50c64c15cbb9fd1ce6056fdb8bcb4b62"> <link defer rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.2.0/css/all.min.css" integrity="sha256-MVopmdyC2tYTiJ8wlktf0uh0v4NgT+vNdyVFepi7Q0c=" crossorigin="anonymous"> <link defer rel="stylesheet" href="https://cdn.jsdelivr.net/npm/academicons@1.9.5/css/academicons.min.css" integrity="sha256-SzrCOBJbGVFMahewkgjwnApaV2+av1DwMAA+/QGLyZw=" crossorigin="anonymous"> <link defer rel="stylesheet" href="https://cdn.jsdelivr.net/npm/scholar-icons@1.0.3/css/scholar-icons.css" integrity="sha256-VY3hHVj/hNX3fYG6wtbA6TcKJQl7+FthzGSyIB64klY=" crossorigin="anonymous"> <link defer rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Roboto+Slab:100,300,400,500,700|Material+Icons&amp;display=swap"> <link defer rel="stylesheet" href="/assets/css/jekyll-pygments-themes-github.css?v=591dab5a4e56573bf4ef7fd332894c99" media="" id="highlight_theme_light"> <link rel="shortcut icon" href="data:image/svg+xml,&lt;svg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20100%20100%22&gt;&lt;text%20y=%22.9em%22%20font-size=%2290%22&gt;%F0%9F%A5%B2&lt;/text&gt;&lt;/svg&gt;"> <link rel="stylesheet" href="/assets/css/main.css?v=3116ba77db9ee1581d05bb3e86fbf7f1"> <link rel="canonical" href="https://joshjms.com/blog/2026/linear-attention/"> <script src="/assets/js/theme.js?v=5286c3e4c334d0ecb8fc0c40ff4fa7ec"></script> <link defer rel="stylesheet" href="/assets/css/jekyll-pygments-themes-native.css?v=5847e5ed4a4568527aa6cfab446049ca" media="none" id="highlight_theme_dark"> <script>
+    initTheme();
+  </script> </head> <body class="fixed-top-nav "> <header> <nav id="navbar" class="navbar navbar-light navbar-expand-sm fixed-top" role="navigation"> <div class="container"> <a class="navbar-brand title font-weight-lighter" href="/"> joshjms </a> <button class="navbar-toggler collapsed navbar-toggler-main" type="button" data-nav-toggle="navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation"> <span class="sr-only">Toggle navigation</span> <span class="icon-bar top-bar"></span> <span class="icon-bar middle-bar"></span> <span class="icon-bar bottom-bar"></span> </button> <div class="collapse navbar-collapse navbar-collapse-main" id="navbarNav"> <ul class="navbar-nav navbar-menu-list flex-nowrap"> <li class="nav-item "> <a class="nav-link" href="/">about </a> </li> <li class="nav-item active"> <a class="nav-link" href="/blog/">blog </a> </li> <li class="nav-item "> <a class="nav-link" href="/repositories/">repositories </a> </li> <li class="nav-item "> <a class="nav-link" href="/cv/">CV </a> </li> <li class="nav-item"> <button id="search-toggle" type="button" title="Search" aria-label="Open search"> <span class="nav-link">ctrl k <i class="fa-solid fa-magnifying-glass"></i></span> </button> </li> <li class="toggle-container"> <button id="light-toggle" type="button" title="Change theme" aria-label="Change color theme"> <i class="fa-half-sun-moon" id="light-toggle-system"></i> <i class="fa-solid fa-moon" id="light-toggle-dark"></i> <i class="fa-solid fa-sun" id="light-toggle-light"></i> </button> </li> </ul> </div> </div> </nav> <progress id="progress" value="0"> <div class="progress-container"> <span class="progress-bar"></span> </div> </progress> </header> <div class="container mt-5" role="main"> <div class="post"> <header class="post-header"> <h1 class="post-title">Linear Attention</h1> <p class="post-meta"> Created on November 09, 2026 </p> <p class="post-tags"> <a href="/blog/2026"> <i class="fa-solid fa-calendar fa-sm"></i> 2026 </a>   ·   <a href="/blog/tag/machine-learning"> <i class="fa-solid fa-hashtag fa-sm"></i> machine-learning</a>   ·   <a href="/blog/category/notes"> <i class="fa-solid fa-tag fa-sm"></i> notes</a> </p> </header> <article class="post-content"> <div id="markdown-content"> <blockquote> <p>Recently, all eight Harry Potter movies were added to Amazon Prime, which I happen to subscribe to, just in time for a long weekend in Singapore. Unsurprisingly, this made for a wonderfully unproductive weekend.</p> </blockquote> <p>This post serves as a note or reference for my own personal use, but I think it’s an interesting topic to write about. I also thought it’d be fun to write a post with a lot of LaTEX math.</p> <p>Attention is a mechanism that allows information to be passed on from one token to another. It is a crucial part of the transformer model which enables modern day LLMs.</p> <p>In the attention mechanism, we have three tensors obtained by projecting token representations with learned weights:</p> <ul> <li>Query $\mathbf{Q}$</li> <li>Key $\mathbf{K}$</li> <li>Value $\mathbf{V}$</li> </ul> <p>In batched multi-head attention, \(\mathbf{Q}, \mathbf{K} \in \mathbb{R}^{B \times T \times H \times D_k}\) where \(B\) is the batch size, \(T\) is the sequence length, \(H\) is the number of heads, and \(D_k\) is the dimension of the key vector, while \(\mathbf{O}, \mathbf{V} \in \mathbb{R}^{B \times T \times H \times D_v}\) where \(D_v\) is the dimension of the value vector (and the rest are the same). For the following complexity notations, we let head dimension $d$ be equal to \(D_k = D_v\).</p> <p>Matrix equations apply independently to each batch example and head, with tokens stored as rows. The softmax formulation here omits the usual scaling factor $1/\sqrt{D_k}$ and describes an unscaled causal attention. Here, $\mathbf{O}$ denotes the per-head output before concatenation and output projection.</p> <p>The output $\mathbf{O}$ of $\text{attention}(\mathbf{Q}, \mathbf{K}, \mathbf{V})$ is given by:</p> \[\mathbf{O} = \text{softmax}(\mathbf{Q}\mathbf{K}^{\mathsf{T}} + \mathbf{M})\mathbf{V}\] <p>$\mathbf{M}$ is the causal mask:</p> \[\mathbf{M}_{ij} = \begin{cases} 0, &amp; j \le i, \\ -\infty, &amp; j &gt; i. \end{cases}\] <p>For some step $t$, the output of softmax attention is:</p> \[\begin{aligned} \mathbf{o}_t^{\mathsf{T}} &amp;= \text{softmax}(\mathbf{q_t}^{\mathsf{T}}\mathbf{K}_{1:t}^{\mathsf{T}} )\mathbf{V}_{1:t} \\ &amp;= \sum_{i=1}^{t} \frac{ \exp\!\left(\mathbf{q}_t^{\mathsf T}\mathbf{k}_i\right) }{ \sum_{j=1}^{t} \exp\!\left(\mathbf{q}_t^{\mathsf T}\mathbf{k}_j\right) } \mathbf{v}_i^{\mathsf T} \end{aligned}\] <p>Here’s an implementation of softmax attention using PyTorch:</p> <div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">softmax_attn</span><span class="p">(</span>
+    <span class="n">q</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="sh">"</span><span class="s">B T H Dk</span><span class="sh">"</span><span class="p">],</span>
+    <span class="n">k</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="sh">"</span><span class="s">B T H Dk</span><span class="sh">"</span><span class="p">],</span>
+    <span class="n">v</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="sh">"</span><span class="s">B T H Dv</span><span class="sh">"</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Float</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="sh">"</span><span class="s">B T H Dv</span><span class="sh">"</span><span class="p">]:</span>
+    <span class="n">T</span> <span class="o">=</span> <span class="n">q</span><span class="p">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    
+    <span class="n">scores</span> <span class="o">=</span> <span class="n">einops</span><span class="p">.</span><span class="nf">einsum</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="sh">"</span><span class="s">B i H Dk, B j H Dk -&gt; B H i j</span><span class="sh">"</span><span class="p">)</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">t</span><span class="p">.</span><span class="nf">tril</span><span class="p">(</span><span class="n">t</span><span class="p">.</span><span class="nf">ones</span><span class="p">([</span><span class="n">T</span><span class="p">,</span> <span class="n">T</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">t</span><span class="p">.</span><span class="nb">bool</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">q</span><span class="p">.</span><span class="n">device</span><span class="p">))</span>
+    <span class="n">scores</span> <span class="o">=</span> <span class="n">scores</span><span class="p">.</span><span class="nf">masked_fill</span><span class="p">(</span><span class="o">~</span><span class="n">mask</span><span class="p">,</span> <span class="o">-</span><span class="nf">float</span><span class="p">(</span><span class="sh">"</span><span class="s">inf</span><span class="sh">"</span><span class="p">))</span>
+    
+    <span class="n">o</span> <span class="o">=</span> <span class="n">einops</span><span class="p">.</span><span class="nf">einsum</span><span class="p">(</span><span class="n">t</span><span class="p">.</span><span class="nf">softmax</span><span class="p">(</span><span class="n">scores</span><span class="p">,</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">),</span> <span class="n">v</span><span class="p">,</span> <span class="sh">"</span><span class="s">B H i j, B j H Dv -&gt; B i H Dv</span><span class="sh">"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">o</span>
+</code></pre></div></div> <p>Softmax attention computes all query-key similarities. For sequence length $T$ and head dimension $d$, this requires $\mathcal{O}(T^2d)$ work per head and batch example. The explicit score matrix uses $\mathcal{O}(T^2)$ memory, although implementations such as FlashAttention avoid materializing the full matrix.</p> <h2 id="linear-attention">Linear Attention</h2> <p>Linear attention replaces softmax attention with a kernel-based formulation that enables linear-time computation, as described by <a href="https://proceedings.mlr.press/v119/katharopoulos20a.html" rel="external nofollow noopener" target="_blank">Katharopoulos et al. (2020)</a>.</p> <p>Unnormalized dot-product attention replaces the softmax weights with raw dot products:</p> \[\begin{aligned} \mathbf{o}^{\mathsf{T}}_t &amp;= \sum^{t}_{i=1}{\left(\mathbf{q}_t^{\mathsf{T}}\mathbf{k}_i\right)\mathbf{v}_i^{\mathsf{T}}} \end{aligned}\] <p>Removing softmax allows us to reassociate the products and factor the query outside the sum, using associativity and distributivity. With keys and values fixed, the resulting output is linear in the query:</p> \[\begin{aligned} \mathbf{o}^{\mathsf{T}}_t &amp;= \sum^{t}_{i=1}{\mathbf{q}_t^{\mathsf{T}}\left(\mathbf{k}_i\mathbf{v}_i^{\mathsf{T}}\right)} \\ &amp;= \mathbf{q}_t^{\mathsf{T}}\sum^{t}_{i=1}{\mathbf{k}_i\mathbf{v}_i^{\mathsf{T}}} \end{aligned}\] <p>Define the state matrix $\mathbf{S}_t\in\mathbb{R}^{D_k\times D_v}$:</p> \[\begin{aligned} \mathbf{S}_t &amp;= \sum_{i=1}^{t}\mathbf{k}_i\mathbf{v}_i^{\mathsf T},\\ \mathbf{S}_t &amp;= \mathbf{S}_{t-1}+\mathbf{k}_t\mathbf{v}_t^{\mathsf T}, \qquad \mathbf{S}_0=\mathbf{0},\\ \mathbf{o}_t &amp;= \mathbf{S}_t^{\mathsf T}\mathbf{q}_t. \end{aligned}\] <p>Applying a feature map to queries and keys gives an unnormalized recurrent implementation. An optional initial state summarizes earlier tokens using the same feature map. Inputs have a nonempty sequence and matching devices and dtypes.</p> <div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">feature_map</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">t</span><span class="p">.</span><span class="n">nn</span><span class="p">.</span><span class="n">functional</span><span class="p">.</span><span class="nf">elu</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+
+<span class="k">def</span> <span class="nf">linear_attn_recurrent</span><span class="p">(</span>
+    <span class="n">q</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="sh">"</span><span class="s">B T H Dk</span><span class="sh">"</span><span class="p">],</span>
+    <span class="n">k</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="sh">"</span><span class="s">B T H Dk</span><span class="sh">"</span><span class="p">],</span>
+    <span class="n">v</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="sh">"</span><span class="s">B T H Dv</span><span class="sh">"</span><span class="p">],</span>
+    <span class="n">initial_state</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="sh">"</span><span class="s">B H Dk Dv</span><span class="sh">"</span><span class="p">]</span> <span class="o">|</span> <span class="bp">None</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="sh">"</span><span class="s">B T H Dv</span><span class="sh">"</span><span class="p">],</span> <span class="n">Float</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="sh">"</span><span class="s">B H Dk Dv</span><span class="sh">"</span><span class="p">]]:</span>
+    <span class="n">B</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="n">H</span><span class="p">,</span> <span class="n">Dk</span> <span class="o">=</span> <span class="n">q</span><span class="p">.</span><span class="n">shape</span>
+    <span class="n">Dv</span> <span class="o">=</span> <span class="n">v</span><span class="p">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="n">phi_q</span> <span class="o">=</span> <span class="nf">feature_map</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
+    <span class="n">phi_k</span> <span class="o">=</span> <span class="nf">feature_map</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+
+    <span class="n">S</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">initial_state</span>
+        <span class="k">if</span> <span class="n">initial_state</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span>
+        <span class="k">else</span> <span class="n">t</span><span class="p">.</span><span class="nf">zeros</span><span class="p">([</span><span class="n">B</span><span class="p">,</span> <span class="n">H</span><span class="p">,</span> <span class="n">Dk</span><span class="p">,</span> <span class="n">Dv</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">q</span><span class="p">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">q</span><span class="p">.</span><span class="n">device</span><span class="p">)</span>
+    <span class="p">)</span>
+
+    <span class="n">outs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">tok</span> <span class="ow">in</span> <span class="nf">range</span><span class="p">(</span><span class="n">T</span><span class="p">):</span>
+        <span class="n">S</span> <span class="o">=</span> <span class="n">S</span> <span class="o">+</span> <span class="n">einops</span><span class="p">.</span><span class="nf">einsum</span><span class="p">(</span><span class="n">phi_k</span><span class="p">[:,</span> <span class="n">tok</span><span class="p">],</span> <span class="n">v</span><span class="p">[:,</span> <span class="n">tok</span><span class="p">],</span> <span class="sh">"</span><span class="s">B H Dk, B H Dv -&gt; B H Dk Dv</span><span class="sh">"</span><span class="p">)</span>
+        <span class="n">o_t</span> <span class="o">=</span> <span class="n">einops</span><span class="p">.</span><span class="nf">einsum</span><span class="p">(</span><span class="n">phi_q</span><span class="p">[:,</span> <span class="n">tok</span><span class="p">],</span> <span class="n">S</span><span class="p">,</span> <span class="sh">"</span><span class="s">B H Dk, B H Dk Dv -&gt; B H Dv</span><span class="sh">"</span><span class="p">)</span>
+        <span class="n">outs</span><span class="p">.</span><span class="nf">append</span><span class="p">(</span><span class="n">o_t</span><span class="p">)</span>
+
+    <span class="n">o</span> <span class="o">=</span> <span class="n">t</span><span class="p">.</span><span class="nf">stack</span><span class="p">(</span><span class="n">outs</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">o</span><span class="p">,</span> <span class="n">S</span>
+</code></pre></div></div> <p>The original formulation in the paper uses a feature map \(\phi(x) = \text{ELU}(x) + 1\) on $\mathbf{q}$ and $\mathbf{k}$ and a normalizer state $\mathbf{z}_t$. The linear attention equation in the paper is given by:</p> \[\begin{aligned} \mathbf{S}_t &amp;= \sum^t_{i=1}{\phi(\mathbf{k}_i)\mathbf{v}_i^{\mathsf T}}, \\ \mathbf{z}_t &amp;= \sum^t_{i=1}{\phi(\mathbf{k}_i)}, \\ \mathbf{o}_t &amp;= \frac{\mathbf{S}_t^{\mathsf T}\phi(\mathbf{q}_t)}{\phi(\mathbf{q}_t)^\mathsf{T}\mathbf{z}_t} \\ \end{aligned}\] <p>The positive feature map gives positive similarity scores, and the denominator makes attention weights sum to one. A normalized streaming implementation must carry both $\mathbf{S}_t$ and $\mathbf{z}_t$.</p> <p>This formulation allows an algorithm with a linear time complexity of \(\mathcal{O}(Td^2)\).</p> <p>Linear attention is generally wonderful. Aside from having to perform fewer operations (given sufficient sequence length), it also does not require a growing <a href="https://huggingface.co/blog/not-lain/kv-caching" rel="external nofollow noopener" target="_blank">key-value (KV) cache</a>, instead summarizes past keys and values in a fixed-size state \(\mathbf{S}_t\). However, naturally, there are downsides to this. With softmax attention, each previous key and value remains available in the KV cache. A new query scores every past key individually and combines the corresponding values. With linear attention, the keys and values are merged into the state matrix. New queries can only read that condensed summary.</p> <p>In addition to that, a recurrent implementation of linear attention processes tokens sequentially. This is generally not great if you spent a lot on a GPU (you might want to exploit more parallelism to make full use of them). Therefore, efforts have been made to make it more GPU friendly.</p> <h3 id="parallel-implementation">Parallel Implementation</h3> <p>Thus, we require a parallel implementation of linear attention.</p> <div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">linear_attn_parallel</span><span class="p">(</span>
+    <span class="n">q</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="sh">"</span><span class="s">B T H Dk</span><span class="sh">"</span><span class="p">],</span>
+    <span class="n">k</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="sh">"</span><span class="s">B T H Dk</span><span class="sh">"</span><span class="p">],</span>
+    <span class="n">v</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="sh">"</span><span class="s">B T H Dv</span><span class="sh">"</span><span class="p">],</span>
+    <span class="n">initial_state</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="sh">"</span><span class="s">B H Dk Dv</span><span class="sh">"</span><span class="p">]</span> <span class="o">|</span> <span class="bp">None</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="sh">"</span><span class="s">B T H Dv</span><span class="sh">"</span><span class="p">],</span> <span class="n">Float</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="sh">"</span><span class="s">B H Dk Dv</span><span class="sh">"</span><span class="p">]]:</span>
+    <span class="n">T</span> <span class="o">=</span> <span class="n">q</span><span class="p">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="n">phi_q</span> <span class="o">=</span> <span class="nf">feature_map</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
+    <span class="n">phi_k</span> <span class="o">=</span> <span class="nf">feature_map</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+
+    <span class="n">scores</span> <span class="o">=</span> <span class="n">einops</span><span class="p">.</span><span class="nf">einsum</span><span class="p">(</span>
+        <span class="n">phi_q</span><span class="p">,</span> <span class="n">phi_k</span><span class="p">,</span> <span class="sh">"</span><span class="s">B i H Dk, B j H Dk -&gt; B H i j</span><span class="sh">"</span>
+    <span class="p">)</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">t</span><span class="p">.</span><span class="nf">ones</span><span class="p">((</span><span class="n">T</span><span class="p">,</span> <span class="n">T</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">t</span><span class="p">.</span><span class="nb">bool</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">q</span><span class="p">.</span><span class="n">device</span><span class="p">).</span><span class="nf">tril</span><span class="p">()</span>
+    <span class="n">scores</span> <span class="o">=</span> <span class="n">scores</span><span class="p">.</span><span class="nf">masked_fill</span><span class="p">(</span><span class="o">~</span><span class="n">mask</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+    <span class="n">o</span> <span class="o">=</span> <span class="n">einops</span><span class="p">.</span><span class="nf">einsum</span><span class="p">(</span>
+        <span class="n">scores</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="sh">"</span><span class="s">B H i j, B j H Dv -&gt; B i H Dv</span><span class="sh">"</span>
+    <span class="p">)</span>
+    <span class="n">S</span> <span class="o">=</span> <span class="n">einops</span><span class="p">.</span><span class="nf">einsum</span><span class="p">(</span>
+        <span class="n">phi_k</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="sh">"</span><span class="s">B T H Dk, B T H Dv -&gt; B H Dk Dv</span><span class="sh">"</span>
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">initial_state</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">o</span> <span class="o">=</span> <span class="n">o</span> <span class="o">+</span> <span class="n">einops</span><span class="p">.</span><span class="nf">einsum</span><span class="p">(</span>
+            <span class="n">phi_q</span><span class="p">,</span> <span class="n">initial_state</span><span class="p">,</span>
+            <span class="sh">"</span><span class="s">B T H Dk, B H Dk Dv -&gt; B T H Dv</span><span class="sh">"</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">S</span> <span class="o">=</span> <span class="n">S</span> <span class="o">+</span> <span class="n">initial_state</span>
+
+    <span class="k">return</span> <span class="n">o</span><span class="p">,</span> <span class="n">S</span>
+</code></pre></div></div> <p>The implementation above seems awfully similar to a traditional softmax attention. It computes all query-key scores at once, applies the causal mask, and uses the scores to combine the values. This is easy to parallelize, but we are back to constructing a \(T \times T\) score matrix. It takes \(\mathcal{O}(T^2d + Td^2)\) work and \(\mathcal{O}(T^2 + d^2)\) intermediate memory per batch example and head. For \(T \ge d\), this simplifies to \(\mathcal{O}(T^2d)\) work and \(\mathcal{O}(T^2)\) intermediate memory.</p> <h3 id="chunkwise-linear-attention">Chunkwise Linear Attention</h3> <p>We now have a sequential linear algorithm and a parallel quadratic algorithm. A fair compromise is to perform some parts in parallel and some parts sequentially. Chunkwise linear attention is a mechanism that divides the sequence into smaller chunks, computes attention within each chunk in parallel, and passes a state between chunks. The basic implementation handles chunks sequentially; more advanced implementations can also parallelize the state propagation.</p> <p>Formally, let chunk $c$ contain query, key, and value matrices denoted as \(\mathbf{Q}_c\), \(\mathbf{K}_c\), and \(\mathbf{V}_c\) respectively. Here $\mathbf{S}_{c-1}$ is the state after the previous chunk. Within each chunk, a binary causal mask excludes future positions:</p> \[A_{ij}=\begin{cases}1,&amp;j\le i,\\0,&amp;j&gt;i.\end{cases}\] <p>The unnormalized output and state update are:</p> \[\begin{aligned} \mathbf{O}_c &amp;=\underbrace{\phi({\mathbf{Q}}_c)\mathbf{S}_{c-1}}_{\text{inter-chunk}} +\underbrace{\left((\phi({\mathbf{Q}}_c)\phi({\mathbf{K}}_c)^{\mathsf T})\odot\mathbf{A}\right)\mathbf{V}_c}_{\text{intra-chunk}},\\ \mathbf{S}_c&amp;=\mathbf{S}_{c-1}+\phi({\mathbf{K}}_c)^{\mathsf T}\mathbf{V}_c. \end{aligned}\] <p>The chunk output combines the incoming state with causal attention within the chunk:</p> <div class="language-py highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">linear_attn_chunkwise</span><span class="p">(</span>
+    <span class="n">q</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="sh">"</span><span class="s">B T H Dk</span><span class="sh">"</span><span class="p">],</span>
+    <span class="n">k</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="sh">"</span><span class="s">B T H Dk</span><span class="sh">"</span><span class="p">],</span>
+    <span class="n">v</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="sh">"</span><span class="s">B T H Dv</span><span class="sh">"</span><span class="p">],</span>
+    <span class="n">chunk_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">64</span><span class="p">,</span>
+    <span class="n">initial_state</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="sh">"</span><span class="s">B H Dk Dv</span><span class="sh">"</span><span class="p">]</span> <span class="o">|</span> <span class="bp">None</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="sh">"</span><span class="s">B T H Dv</span><span class="sh">"</span><span class="p">],</span> <span class="n">Float</span><span class="p">[</span><span class="n">Tensor</span><span class="p">,</span> <span class="sh">"</span><span class="s">B H Dk Dv</span><span class="sh">"</span><span class="p">]]:</span>
+    <span class="k">if</span> <span class="n">chunk_size</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="nc">ValueError</span><span class="p">(</span><span class="sh">"</span><span class="s">chunk_size must be positive</span><span class="sh">"</span><span class="p">)</span>
+    <span class="n">B</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="n">H</span><span class="p">,</span> <span class="n">Dk</span> <span class="o">=</span> <span class="n">q</span><span class="p">.</span><span class="n">shape</span>
+    <span class="n">Dv</span> <span class="o">=</span> <span class="n">v</span><span class="p">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="n">S</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">initial_state</span>
+        <span class="k">if</span> <span class="n">initial_state</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span>
+        <span class="k">else</span> <span class="n">t</span><span class="p">.</span><span class="nf">zeros</span><span class="p">([</span><span class="n">B</span><span class="p">,</span> <span class="n">H</span><span class="p">,</span> <span class="n">Dk</span><span class="p">,</span> <span class="n">Dv</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">q</span><span class="p">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">q</span><span class="p">.</span><span class="n">device</span><span class="p">)</span>
+    <span class="p">)</span>
+
+    <span class="n">outs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">start</span> <span class="ow">in</span> <span class="nf">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="n">chunk_size</span><span class="p">):</span>
+        <span class="n">end</span> <span class="o">=</span> <span class="nf">min</span><span class="p">(</span><span class="n">T</span><span class="p">,</span> <span class="n">start</span> <span class="o">+</span> <span class="n">chunk_size</span><span class="p">)</span>
+        
+        <span class="n">phi_q</span> <span class="o">=</span> <span class="nf">feature_map</span><span class="p">(</span><span class="n">q</span><span class="p">[:,</span> <span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">])</span>
+        <span class="n">phi_k</span> <span class="o">=</span> <span class="nf">feature_map</span><span class="p">(</span><span class="n">k</span><span class="p">[:,</span> <span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">])</span>
+        
+        <span class="n">vc</span> <span class="o">=</span> <span class="n">v</span><span class="p">[:,</span> <span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span>
+        <span class="n">inter</span> <span class="o">=</span> <span class="n">einops</span><span class="p">.</span><span class="nf">einsum</span><span class="p">(</span>
+            <span class="n">phi_q</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="sh">"</span><span class="s">B i H Dk, B H Dk Dv -&gt; B i H Dv</span><span class="sh">"</span>
+        <span class="p">)</span>
+        <span class="n">scores</span> <span class="o">=</span> <span class="n">einops</span><span class="p">.</span><span class="nf">einsum</span><span class="p">(</span>
+            <span class="n">phi_q</span><span class="p">,</span> <span class="n">phi_k</span><span class="p">,</span> <span class="sh">"</span><span class="s">B i H Dk, B j H Dk -&gt; B H i j</span><span class="sh">"</span>
+        <span class="p">)</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">t</span><span class="p">.</span><span class="nf">ones</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">end</span> <span class="o">-</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="o">-</span> <span class="n">start</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">t</span><span class="p">.</span><span class="nb">bool</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">q</span><span class="p">.</span><span class="n">device</span>
+        <span class="p">).</span><span class="nf">tril</span><span class="p">()</span>
+        <span class="n">scores</span> <span class="o">=</span> <span class="n">scores</span><span class="p">.</span><span class="nf">masked_fill</span><span class="p">(</span><span class="o">~</span><span class="n">mask</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">intra</span> <span class="o">=</span> <span class="n">einops</span><span class="p">.</span><span class="nf">einsum</span><span class="p">(</span>
+            <span class="n">scores</span><span class="p">,</span> <span class="n">vc</span><span class="p">,</span> <span class="sh">"</span><span class="s">B H i j, B j H Dv -&gt; B i H Dv</span><span class="sh">"</span>
+        <span class="p">)</span>
+        <span class="n">outs</span><span class="p">.</span><span class="nf">append</span><span class="p">(</span><span class="n">inter</span> <span class="o">+</span> <span class="n">intra</span><span class="p">)</span>
+        <span class="n">S</span> <span class="o">=</span> <span class="n">S</span> <span class="o">+</span> <span class="n">einops</span><span class="p">.</span><span class="nf">einsum</span><span class="p">(</span>
+            <span class="n">phi_k</span><span class="p">,</span> <span class="n">vc</span><span class="p">,</span> <span class="sh">"</span><span class="s">B j H Dk, B j H Dv -&gt; B H Dk Dv</span><span class="sh">"</span>
+        <span class="p">)</span>
+
+    <span class="n">o</span> <span class="o">=</span> <span class="n">t</span><span class="p">.</span><span class="nf">cat</span><span class="p">(</span><span class="n">outs</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">o</span><span class="p">,</span> <span class="n">S</span>
+</code></pre></div></div> <p>For sequence length $T$, chunk size $C$, and head dimension $d$, the matrix-based chunkwise formulation takes \(\mathcal{O}(TCd+Td^2)\).</p> <p>Intra-chunk attention costs $\mathcal{O}(TCd)$ across all chunks, while reading and updating the state costs $\mathcal{O}(Td^2)$. These work bounds omit the multiplicative batch and head factors $BH$. For fixed $C$ and $d$, the work is linear in $T$.</p> <h2 id="summary">Summary</h2> <ul> <li>Linear attention is a variation of vanilla attention without softmax.</li> </ul> </div> </article> </div> </div> <footer class="fixed-bottom" role="contentinfo"> <div class="container mt-0"> © Copyright 2026 Joshua James. </div> </footer> <script>
+  window.alFolio = {
+    compatBootstrap: false
+  };
+</script> <script src="/assets/js/nav-toggle.js?v=141bd79a73ebc0f0b6ea58e440ae79fc"></script> <script defer src="https://cdn.jsdelivr.net/npm/masonry-layout@4.2.2/dist/masonry.pkgd.min.js" integrity="sha256-Nn1q/fx0H7SNLZMQ5Hw5JLaTRZp0yILA/FRexe19VdI=" crossorigin="anonymous"></script> <script defer src="https://cdn.jsdelivr.net/npm/imagesloaded@5.0.0/imagesloaded.pkgd.min.js" integrity="sha256-htrLFfZJ6v5udOG+3kNLINIKh2gvoKqwEhHYfTTMICc=" crossorigin="anonymous"></script> <script defer src="/assets/js/masonry.js?v=e49affc7bd2646f6acdad1dbe02c2359" type="text/javascript"></script> <script defer type="text/javascript" id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js" integrity="sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI=" crossorigin="anonymous"></script> <script src="/assets/al_math/js/mathjax-setup.js"></script> <script src="/assets/js/tooltips-setup.js?v=fe487e99db6c43751e6e7bdb2d6a0611"></script> <script src="/assets/js/no_defer.js?v=53b1b1a645525975c963ce8bf8bfefcf"></script> <script defer src="/assets/js/common.js?v=87baac90f765f2f3362dcf6aaf312a8a"></script> <script defer src="/assets/js/copy_code.js?v=c8a01c11a92744d44b093fc3bda915df" type="text/javascript"></script> <script defer src="/assets/js/jupyter_new_tab.js?v=896d254890d9b47f0281f63bfccf0dee"></script> <script async src="https://d1bxh8uas1mnw7.cloudfront.net/assets/embed.js"></script> <script async src="https://badge.dimensions.ai/badge.js"></script> <script defer src="https://cdn.jsdelivr.net/npm/medium-zoom@1.1.0/dist/medium-zoom.min.js" integrity="sha256-ZgMyDAIYDYGxbcpJcfUnYwNevG/xi9OHKaR/8GK+jWc=" crossorigin="anonymous"></script> <script defer src="/assets/al_img_tools/js/zoom.js"></script> <script defer src="/assets/js/progress-bar.js?v=499464c5c63ced6cf7ad62509f1e2610" type="text/javascript"></script> <script src="https://cdn.jsdelivr.net/npm/vanilla-back-to-top@7.2.1/dist/vanilla-back-to-top.min.js" integrity="sha256-uMJJ3EoTyfRBoTbR+lrfu1uRQ87RZG8AR3cVNuQVeFg=" crossorigin="anonymous"></script> <script>
+    addBackToTop();
+  </script> <script type="module" src="/assets/al_search/js/search/ninja-keys.min.js"></script> <ninja-keys hidebreadcrumbs noautoloadmdicons placeholder="Type to start searching"></ninja-keys> <script src="/assets/al_search/js/search-setup.js"></script> <script>
+// get the ninja-keys element
+const ninja = document.querySelector('ninja-keys');
+
+// add the home and posts menu items
+ninja.data = [{
+    id: "nav-about",
+    title: "about",
+    section: "Navigation",
+    handler: () => {
+      window.location.href = "/";
+    },
+  },{id: "nav-blog",
+          title: "blog",
+          description: "",
+          section: "Navigation",
+          handler: () => {
+            window.location.href = "/blog/";
+          },
+        },{id: "nav-repositories",
+          title: "repositories",
+          description: "GitHub has an unplanned uptime.",
+          section: "Navigation",
+          handler: () => {
+            window.location.href = "/repositories/";
+          },
+        },{id: "nav-cv",
+          title: "CV",
+          description: "A summary of my experiences.",
+          section: "Navigation",
+          handler: () => {
+            window.location.href = "/cv/";
+          },
+        },{id: "post-linear-attention",
+        
+          title: "Linear Attention",
+        
+        description: "The mathematics and code implementation of linear attention.",
+        section: "Posts",
+        handler: () => {
+          
+            window.location.href = "/blog/2026/linear-attention/";
+          
+        },
+      },{id: "post-cadencia-automatic-beatmap-generator-for-osu-mania",
+        
+          title: "Cadencia: Automatic Beatmap Generator for osu!mania",
+        
+        description: "Training a model for automatic generation of 4K osu!mania beatmap for arbitrary songs.",
+        section: "Posts",
+        handler: () => {
+          
+            window.location.href = "/blog/2026/cadencia/";
+          
+        },
+      },{id: "post-linux-namespaces-from-inside-the-kernel",
+        
+          title: "Linux Namespaces From Inside the Kernel",
+        
+        description: "A deep dive into how Linux namespaces actually work inside the Linux kernel.",
+        section: "Posts",
+        handler: () => {
+          
+            window.location.href = "/blog/2026/linux-namespaces-from-inside-the-kernel/";
+          
+        },
+      },{id: "books-the-godfather",
+          title: 'The Godfather',
+          description: "",
+          section: "Books",handler: () => {
+              window.location.href = "/books/the_godfather/";
+            },},{id: "news-migrated-blog-sparkles-sparkles",
+          title: 'Migrated blog! <img class="emoji" title=":sparkles:" alt=":sparkles:" src="https://github.githubassets.com/images/icons/emoji/unicode/2728.png" height="20" width="20"> <img class="emoji" title=":sparkles:" alt=":sparkles:" src="https://github.githubassets.com/images/icons/emoji/unicode/2728.png" height="20" width="20">',
+          description: "",
+          section: "News",},{
+        id: 'social-cv',
+        title: 'CV',
+        section: 'Socials',
+        handler: () => {
+          window.open("/assets/pdf/example_pdf.pdf", "_blank");
+        },
+      },{
+        id: 'social-email',
+        title: 'email',
+        section: 'Socials',
+        handler: () => {
+          window.open("mailto:%6A%6F%73%68%6A%6D%73%31%36%30%37@%67%6D%61%69%6C.%63%6F%6D", "_blank");
+        },
+      },{
+      id: 'light-theme',
+      title: 'Change theme to light',
+      description: 'Change the theme of the site to Light',
+      section: 'Theme',
+      handler: () => {
+        setThemeSetting("light");
+      },
+    },
+    {
+      id: 'dark-theme',
+      title: 'Change theme to dark',
+      description: 'Change the theme of the site to Dark',
+      section: 'Theme',
+      handler: () => {
+        setThemeSetting("dark");
+      },
+    },
+    {
+      id: 'system-theme',
+      title: 'Use system default theme',
+      description: 'Change the theme of the site to System Default',
+      section: 'Theme',
+      handler: () => {
+        setThemeSetting("system");
+      },
+    },];
+
+</script> <script src="/assets/al_search/js/shortcut-key.js"></script> </body> </html>
